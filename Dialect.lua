@@ -80,6 +80,60 @@ function D.GetItemNameByID(id)
     return t and t.name
 end
 
+-- What is coating a weapon: a poison, a stone, an oil. Three clients,
+-- three shapes, and no way to tell from here which one answers, so all
+-- three are tried and the winner is named in the result. A caller that
+-- picks one and finds it missing has no second path, which is how a
+-- rogue ended up looking at two bare blades with poison on both.
+--
+-- Returns nil when nothing is on the weapon, or
+-- { msLeft, charges, enchantID, icon, via } when something is. Any
+-- field may be nil on a client that will not say.
+local tempPaperDoll = fn("C_PaperDollInfo", "GetTemporaryEnchantmentInfo")
+local tempItem      = fn("C_Item", "GetWeaponEnchantInfo")
+local tempClassic   = glob("GetWeaponEnchantInfo")
+
+function D.GetTempEnchant(slot)
+    if slot == nil then return nil end
+
+    -- A table per slot, whichever module offers it. In order, because
+    -- pairs would pick a different one between runs and which call
+    -- answered is a thing the product reports.
+    for _, p in ipairs({ { "C_Item", tempItem }, { "C_PaperDollInfo", tempPaperDoll } }) do
+        local via, f = p[1], p[2]
+        if f then
+            local ok, info = pcall(f, slot)
+            if ok and type(info) == "table" then
+                -- Some builds wrap the answer in a list.
+                local e = info.enchants and info.enchants[1] or info
+                if e.remainingTimeMs or e.timeLeft or e.enchantID or e.charges
+                   or e.chargesRemaining then
+                    return { msLeft = e.remainingTimeMs or e.timeLeft,
+                             charges = e.chargesRemaining or e.charges,
+                             enchantID = e.enchantID,
+                             icon = e.enchantIconID or e.icon,
+                             via = via }
+                end
+            end
+        end
+    end
+
+    -- The classic global: no arguments, and every slot in one flat run
+    -- of values. Main hand first, then off hand, then ranged.
+    if tempClassic then
+        local ok, r = pcall(function() return { tempClassic() } end)
+        if ok and type(r) == "table" and #r >= 4 then
+            local at = (slot == 16 and 0) or (slot == 17 and 4) or (slot == 18 and 8)
+            if at and r[at + 1] then
+                return { msLeft = r[at + 2], charges = r[at + 3],
+                         enchantID = r[at + 4], via = "GetWeaponEnchantInfo" }
+            end
+            if at then return nil end
+        end
+    end
+    return nil
+end
+
 local itemCount = chose("GetItemCount", fn("C_Item", "GetItemCount"), glob("GetItemCount"))
 function D.GetItemCount(item, includeBank, includeUses)
     if not itemCount or item == nil then return 0 end
