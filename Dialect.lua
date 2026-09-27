@@ -118,6 +118,58 @@ function D.GetTempEnchant(slot)
         end
     end
 
+    -- Nothing answered. The game still writes it on the item, as a
+    -- line like "Instant Poison (23 min) (60 Charges)", so read that.
+    -- Last, because parsing a sentence is the worst way to learn
+    -- something a function will tell you, and first choice when the
+    -- functions are all present and all silent, which is what this
+    -- client does.
+    local function fromTooltip(slot)
+        local lines
+        local info = C_TooltipInfo and C_TooltipInfo.GetInventoryItem
+        if info then
+            local ok, t = pcall(info, "player", slot)
+            if ok and type(t) == "table" then lines = t.lines end
+        end
+        if not lines then
+            -- The older way: pour it into a tooltip of our own and read
+            -- the font strings back off it.
+            local tt = D._scanTip
+            if not tt and CreateFrame then
+                tt = CreateFrame("GameTooltip", "WickCoreScanTip", nil, "GameTooltipTemplate")
+                if tt and tt.SetOwner then
+                    tt:SetOwner(UIParent, "ANCHOR_NONE")
+                    D._scanTip = tt
+                end
+            end
+            if not (tt and tt.SetInventoryItem) then return nil end
+            tt:ClearLines()
+            pcall(tt.SetInventoryItem, tt, "player", slot)
+            lines = {}
+            for i = 1, (tt.NumLines and tt:NumLines() or 0) do
+                local fs = _G["WickCoreScanTipTextLeft" .. i]
+                local txt = fs and fs.GetText and fs:GetText()
+                if txt then lines[#lines + 1] = { leftText = txt } end
+            end
+        end
+        if not lines then return nil end
+        for _, line in ipairs(lines) do
+            local txt = line.leftText or line
+            if type(txt) == "string" then
+                -- The minutes in brackets are what marks the temporary
+                -- line out from a permanent enchant, which has none.
+                local name, mins = txt:match("^(.-)%s*%((%d+)%s*[Mm][Ii][Nn]%)")
+                if name and name ~= "" then
+                    local charges = txt:match("%((%d+)%s*[Cc]harge")
+                    return { msLeft = tonumber(mins) * 60000,
+                             charges = tonumber(charges),
+                             name = name, via = "tooltip" }
+                end
+            end
+        end
+        return nil
+    end
+
     -- The classic global: no arguments, and every slot in one flat run
     -- of values. Main hand first, then off hand, then ranged.
     if tempClassic then
@@ -128,10 +180,10 @@ function D.GetTempEnchant(slot)
                 return { msLeft = r[at + 2], charges = r[at + 3],
                          enchantID = r[at + 4], via = "GetWeaponEnchantInfo" }
             end
-            if at then return nil end
+            if at then return fromTooltip(slot) end
         end
     end
-    return nil
+    return fromTooltip(slot)
 end
 
 local itemCount = chose("GetItemCount", fn("C_Item", "GetItemCount"), glob("GetItemCount"))
