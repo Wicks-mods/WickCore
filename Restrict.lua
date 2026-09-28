@@ -125,7 +125,41 @@ local function fire(kind, active)
     end
 end
 
+-- What the client refused, and what it refused to do.
+--
+-- Two different things arrive here. Blocked is tainted execution
+-- reaching a protected function, and it writes a taint log line.
+-- Forbidden is a call an addon may not make at all: no taint, no log
+-- entry, and the popup does not name the function. This event does,
+-- and nothing in the suite was listening, so the one fact that ends
+-- the guessing was being thrown away each time it happened.
+R.refusals = {}
+
+local function noteRefusal(kind, addon, fn)
+    if type(addon) ~= "string" or addon:sub(1, 4) ~= "Wick" then return end
+    fn = tostring(fn or "an unnamed call")
+    local key = kind .. " " .. addon .. " " .. fn
+    if R.refusals[key] then
+        R.refusals[key].count = R.refusals[key].count + 1
+        return
+    end
+    R.refusals[key] = { kind = kind, addon = addon, fn = fn, count = 1 }
+    -- Once per distinct call. A popup in a loop should not become a
+    -- wall of chat.
+    Core.Print("WickCore", ("%s was %s from %s. Tell Wick: this is the name the popup will not give you.")
+        :format(addon, kind == "forbidden" and "forbidden" or "blocked", fn))
+end
+
+function R:Refusals()
+    local out = {}
+    for _, r in pairs(self.refusals) do out[#out + 1] = r end
+    table.sort(out, function(a, b) return a.fn < b.fn end)
+    return out
+end
+
 local frame = CreateFrame("Frame")
+pcall(frame.RegisterEvent, frame, "ADDON_ACTION_FORBIDDEN")
+pcall(frame.RegisterEvent, frame, "ADDON_ACTION_BLOCKED")
 local hasStateEvent = pcall(frame.RegisterEvent, frame, "ADDON_RESTRICTION_STATE_CHANGED")
 if not hasStateEvent then
     pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
@@ -133,7 +167,11 @@ if not hasStateEvent then
 end
 
 frame:SetScript("OnEvent", function(_, event, a, b)
-    if event == "ADDON_RESTRICTION_STATE_CHANGED" then
+    if event == "ADDON_ACTION_FORBIDDEN" then
+        noteRefusal("forbidden", a, b)
+    elseif event == "ADDON_ACTION_BLOCKED" then
+        noteRefusal("blocked", a, b)
+    elseif event == "ADDON_RESTRICTION_STATE_CHANGED" then
         -- a = AddOnRestrictionType value, b = AddOnRestrictionState (0 inactive)
         local kind = byValue[a] or tostring(a)
         fire(kind, b ~= 0)

@@ -335,10 +335,28 @@ function Core.self:OnEnable()
             else
                 self:Print("unknown theme '" .. want .. "'. /wickcore theme list")
             end
+        elseif msg == "refused" or msg == "forbidden" or msg == "blocked" then
+            -- What the client refused and what it refused to do. The
+            -- popup will not name the call and a forbidden action never
+            -- reaches the taint log, so this is the only place it is
+            -- written down.
+            local list = Core.Restrict:Refusals()
+            if #list == 0 then
+                self:Print("nothing has been refused this session.")
+            else
+                for _, r in ipairs(list) do
+                    self:Print(("%s: %s was %s%s"):format(r.addon, r.fn, r.kind,
+                        r.count > 1 and ("  (x" .. r.count .. ")") or ""))
+                end
+            end
         else
             for _, line in ipairs(Core.Client:Report()) do self:Print(line) end
             self:Print("restrictions: " .. Core.Restrict:Summary())
-            self:Print("/wickcore dialect | addons | options | theme | debug")
+            local refused = #Core.Restrict:Refusals()
+            if refused > 0 then
+                self:Print(("|cffE04B4B%d call(s) refused this session.|r /wickcore refused names them."):format(refused))
+            end
+            self:Print("/wickcore dialect | addons | options | theme | refused | debug")
         end
     end, "/wickcore", "/wc")
 
