@@ -22,6 +22,10 @@ SOFTWARE.
 
 LibStub.lua is public domain and is not covered by the above.
 
+Bundled font: PT Sans Narrow (Media/Fonts) is copyright ParaType Ltd. and is
+bundled unmodified under the SIL Open Font License 1.1
+(Media/Fonts/PT_Sans_Narrow_OFL.txt), not the MIT terms above.
+
 The "Wick", "WickCore", "Wick's Mods", and associated wordmark, logomark, and
 brand chrome (fel-green L-bracket corners, locked palette) are trademarks of
 Wick and are NOT licensed under the MIT terms above. See TRADEMARK.md in the

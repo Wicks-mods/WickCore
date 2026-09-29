@@ -218,6 +218,14 @@ function Options:ThemeSection(parent, x, y)
     parent.themeClassic:SetPoint("TOPLEFT", x, y)
     parent.themeClassic:SetWidth(360)
     y = y - 22
+    -- The shape the whole suite is drawn in. Panels are built once, so a
+    -- change is saved and the interface reloaded.
+    parent.themeStyle = Chrome:Check(parent, "Wick Modern style (rounded glass, the Wick font). Off is Wick OG",
+        function() return Chrome:Modern() end,
+        function(v) Chrome:SetStyle(v and "modern" or "og"); ReloadUI() end)
+    parent.themeStyle:SetPoint("TOPLEFT", x, y)
+    parent.themeStyle:SetWidth(420)
+    y = y - 22
     refresh()
     Chrome:OnThemeChanged(refresh)
     return y

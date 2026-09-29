@@ -267,6 +267,9 @@ Core.self = Core:NewAddon("WickCore", {
 
 function Core.self:OnInitialize()
     Core.debug = self.db.global.debug and true or false
+    -- The saved variable is readable now: the style's font becomes the one
+    -- products find in Chrome.FONT.
+    if Core.Chrome and Core.Chrome.Font then Core.Chrome.FONT = Core.Chrome:Font() end
     if Core.Chrome and Core.Chrome.ApplySavedTheme then Core.Chrome:ApplySavedTheme("init") end
 end
 

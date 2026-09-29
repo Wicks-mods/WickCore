@@ -95,11 +95,104 @@ function Chrome:Retint()
             local a = info.alpha or c[4] or 1
             if info.kind == "text" then
                 if region.SetTextColor then region:SetTextColor(c[1], c[2], c[3], a) end
+            elseif info.kind == "vertex" then
+                if region.SetVertexColor then region:SetVertexColor(c[1], c[2], c[3], a) end
             elseif region.SetColorTexture then
                 region:SetColorTexture(c[1], c[2], c[3], a)
             end
         end
     end
+end
+
+-- ============================================================
+-- Style: Wick Modern or Wick OG
+-- ============================================================
+-- The shape the chrome is drawn in, separate from its colours (Theme.lua).
+-- Wick OG is the original: flat panels, a 1px border, fel L-brackets.
+-- Wick Modern is the look Wick's UI set: rounded glass panels on a soft
+-- shadow, no border line and no brackets, the Wick font, rounded buttons
+-- and fields with a ring in the accent on hover. Modern is the default.
+-- The choice is account-wide, read from the saved variable directly (as
+-- the theme is), and changing it takes a reload: panels are built once.
+local MEDIA = "Interface\\AddOns\\WickCore\\Media\\"
+Chrome.Media = {
+    rounded   = MEDIA .. "Textures\\rounded.png",
+    ring      = MEDIA .. "Textures\\ring.png",
+    shadow    = MEDIA .. "Textures\\shadow.png",
+    roundmask = MEDIA .. "Textures\\roundmask.png",
+    font      = MEDIA .. "Fonts\\PT_Sans-Narrow-Web-Bold.ttf",
+}
+function Chrome:Glyph(name) return MEDIA .. "Textures\\glyph-" .. name .. ".png" end
+
+Chrome.FONT_OG = "Fonts\\FRIZQT__.TTF"
+
+local function styleStore()
+    local sv = rawget(_G, "WickCoreDB")
+    return type(sv) == "table" and type(sv.global) == "table" and sv.global or nil
+end
+
+function Chrome:Style()
+    local g = styleStore()
+    local s = g and g.style
+    return (s == "og") and "og" or "modern"
+end
+
+function Chrome:Modern() return self:Style() == "modern" end
+
+function Chrome:SetStyle(style)
+    local sv = rawget(_G, "WickCoreDB")
+    if type(sv) ~= "table" then return end
+    sv.global = sv.global or {}
+    sv.global.style = (style == "og") and "og" or "modern"
+    if Core.Store then Core.Store:Dirty() end
+end
+
+-- The font every Chrome text uses: the Wick font in the modern style,
+-- Friz in the original. Chrome.FONT is kept current for products that
+-- read it directly.
+function Chrome:Font() return self:Modern() and self.Media.font or self.FONT_OG end
+
+local function slice(tex, m)
+    if tex.SetTextureSliceMargins then
+        tex:SetTextureSliceMargins(m, m, m, m)
+        if tex.SetTextureSliceMode then pcall(tex.SetTextureSliceMode, tex, 0) end
+    end
+end
+
+-- A rounded glass texture in a palette colour, re-tinted with the theme.
+function Chrome:Glass(parent, layer, color, alpha, sub)
+    local t = parent:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
+    t:SetTexture(self.Media.rounded)
+    slice(t, 8)
+    color = color or C.void
+    local a = alpha or color[4] or 1
+    t:SetVertexColor(color[1], color[2], color[3], a)
+    Chrome:Register(t, color, "vertex", a)
+    return t
+end
+
+-- The soft lift under a modern panel, reaching past its edges.
+function Chrome:Lift(f)
+    local s = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+    s:SetTexture(self.Media.shadow)
+    slice(s, 28)
+    s:SetPoint("TOPLEFT", f, "TOPLEFT", -12, 10)
+    s:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 12, -14)
+    s:SetVertexColor(0, 0, 0, 0.6)
+    return s
+end
+
+-- The rounded ring a modern control shows for hover or selection.
+function Chrome:Ring(parent, color, layer)
+    local r = parent:CreateTexture(nil, layer or "BORDER", nil, 2)
+    r:SetTexture(self.Media.ring)
+    slice(r, 8)
+    r:SetAllPoints()
+    color = color or C.fel
+    r:SetVertexColor(color[1], color[2], color[3], 1)
+    Chrome:Register(r, color, "vertex", 1)
+    r:Hide()
+    return r
 end
 
 -- ============================================================
@@ -119,7 +212,8 @@ end
 
 function Chrome:Text(parent, size, color, flags)
     local fs = parent:CreateFontString(nil, "OVERLAY")
-    fs:SetFont(self.FONT, size or 12, flags or "")
+    fs:SetFont(self:Font(), size or 12, flags or "")
+    if self:Modern() then fs:SetShadowOffset(1, -1); fs:SetShadowColor(0, 0, 0, 0.8) end
     color = color or C.text
     fs:SetTextColor(color[1], color[2], color[3], color[4] or 1)
     Chrome:Register(fs, color, "text")
@@ -221,10 +315,24 @@ function Chrome:NewPanel(name, o)
     if o.strata then f:SetFrameStrata(o.strata) end
     f:Hide()
 
-    local bg = self:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints()
-    self:AddBorder(f)
+    local modern = self:Modern()
+    local bg
+    if modern then
+        -- Rounded glass on a soft lift; the border exists (products may
+        -- recolour it) but draws nothing.
+        bg = self:Glass(f, "BACKGROUND", C.void, 0.95, -7)
+        bg:SetAllPoints()
+        f.lift = self:Lift(f)
+        self:AddBorder(f)
+        for _, t in pairs(f.border) do t:Hide() end
+    else
+        bg = self:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints()
+        self:AddBorder(f)
+    end
+    f.bg = bg
 
-    -- Header strip
+    -- Header strip: a band in the original style; in the modern one the
+    -- title sits on the glass, with only a faint rule under it.
     local H = self.HEADER_H
     local header = self:Texture(f, "ARTWORK", C.shadow)
     header:SetPoint("TOPLEFT", 1, -1)
@@ -234,6 +342,7 @@ function Chrome:NewPanel(name, o)
     sep:SetPoint("TOPLEFT", 1, -H - 1)
     sep:SetPoint("TOPRIGHT", -1, -H - 1)
     sep:SetHeight(1)
+    if modern then header:Hide(); sep:SetAlpha(0.35) end
     f.header = header
 
     f.title = self:Text(f, 12)
@@ -245,11 +354,27 @@ function Chrome:NewPanel(name, o)
         local close = CreateFrame("Button", nil, f)
         close:SetSize(H, H)
         close:SetPoint("TOPRIGHT", -1, -1)
-        local x = self:Text(close, 13)
-        x:SetPoint("CENTER")
-        x:SetText("x")
-        close:SetScript("OnEnter", function() x:SetTextColor(C.fel[1], C.fel[2], C.fel[3], 1) end)
-        close:SetScript("OnLeave", function() x:SetTextColor(C.text[1], C.text[2], C.text[3], 1) end)
+        if modern then
+            -- Our flat close mark; the accent copy shows on the highlight
+            -- layer by itself.
+            local x = close:CreateTexture(nil, "OVERLAY")
+            x:SetSize(12, 12)
+            x:SetPoint("CENTER")
+            x:SetTexture(self:Glyph("close"))
+            x:SetVertexColor(C.text[1], C.text[2], C.text[3], 1)
+            Chrome:Register(x, C.text, "vertex", 1)
+            local xh = close:CreateTexture(nil, "HIGHLIGHT")
+            xh:SetAllPoints(x)
+            xh:SetTexture(self:Glyph("close"))
+            xh:SetVertexColor(C.fel[1], C.fel[2], C.fel[3], 1)
+            Chrome:Register(xh, C.fel, "vertex", 1)
+        else
+            local x = self:Text(close, 13)
+            x:SetPoint("CENTER")
+            x:SetText("x")
+            close:SetScript("OnEnter", function() x:SetTextColor(C.fel[1], C.fel[2], C.fel[3], 1) end)
+            close:SetScript("OnLeave", function() x:SetTextColor(C.text[1], C.text[2], C.text[3], 1) end)
+        end
         close:SetScript("OnClick", function() f:Hide() end)
         f.close = close
         -- Escape closes it too, ahead of the game menu. UISpecialFrames is
@@ -287,6 +412,16 @@ function Chrome:NewPanel(name, o)
     end
 
     self:AddBrackets(f, grip)
+    if modern then
+        -- No brackets in the modern style; a resizable panel keeps a soft
+        -- grip mark in its corner so the handle can still be found.
+        for point, pair in pairs(f.brackets) do
+            local keep = grip and point == "BOTTOMRIGHT"
+            for _, t in ipairs(pair) do
+                if keep then t:SetAlpha(0.45) else t:Hide() end
+            end
+        end
+    end
 
     if o.db then
         f.db = o.db
@@ -339,6 +474,19 @@ end
 function Chrome:Button(parent, text, width, height)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(width or 90, height or 22)
+    if self:Modern() then
+        -- A rounded tile; on hover the accent ring.
+        local bg = self:Glass(b, "BACKGROUND", C.shadow, 0.92); bg:SetAllPoints()
+        self:AddBorder(b)
+        for _, t in pairs(b.border) do t:Hide() end
+        b.ring = self:Ring(b)
+        b.label = self:Text(b, 11)
+        b.label:SetPoint("CENTER")
+        b.label:SetText(text)
+        b:SetScript("OnEnter", function(s) s.ring:Show() end)
+        b:SetScript("OnLeave", function(s) s.ring:Hide() end)
+        return b
+    end
     local bg = self:Texture(b, "BACKGROUND", C.shadow); bg:SetAllPoints()
     self:AddBorder(b)
     b.label = self:Text(b, 11)
@@ -360,9 +508,17 @@ function Chrome:Check(parent, label, get, set)
     local box = CreateFrame("Frame", nil, b)
     box:SetSize(14, 14)
     box:SetPoint("LEFT", 0, 0)
-    local bbg = self:Texture(box, "BACKGROUND", C.void); bbg:SetAllPoints()
-    self:AddBorder(box)
-    local fill = self:Texture(box, "ARTWORK", C.fel)
+    local fill
+    if self:Modern() then
+        local bbg = self:Glass(box, "BACKGROUND", C.shadow, 0.92); bbg:SetAllPoints()
+        self:AddBorder(box)
+        for _, t in pairs(box.border) do t:Hide() end
+        fill = self:Glass(box, "ARTWORK", C.fel, 1)
+    else
+        local bbg = self:Texture(box, "BACKGROUND", C.void); bbg:SetAllPoints()
+        self:AddBorder(box)
+        fill = self:Texture(box, "ARTWORK", C.fel)
+    end
     fill:SetPoint("TOPLEFT", 3, -3)
     fill:SetPoint("BOTTOMRIGHT", -3, 3)
     b.fill = fill
@@ -433,5 +589,6 @@ end
 function Chrome:Divider(parent)
     local t = self:Texture(parent, "ARTWORK", C.border)
     t:SetHeight(1)
+    if self:Modern() then t:SetAlpha(0.5) end
     return t
 end
