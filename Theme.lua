@@ -155,8 +155,15 @@ local function buildThemes()
     end
     local cc = Chrome.customColors
     local h, s = rgbToHsl(rgb(cc.main))
+    -- The accent is drawn as text (headings, titles) as well as rings and
+    -- lines, so a custom one is never allowed darker than reads on the
+    -- panel: its hue and saturation are kept, its lightness lifted to at
+    -- least 0.45. Black, which a colour picker can hand back by accident,
+    -- becomes a mid grey rather than invisible text.
+    local ah, as, al = rgbToHsl(rgb(cc.accent))
+    local accent = al < 0.45 and hsl(ah, as, 0.45) or rgb(cc.accent)
     add({ id = "custom", name = "Custom", custom = true,
-          colors = derive(rgb(cc.accent), nil, { h = h, s = math.max(0.08, math.min(0.6, s)) }) })
+          colors = derive(accent, nil, { h = h, s = math.max(0.08, math.min(0.6, s)) }) })
 end
 buildThemes()
 
