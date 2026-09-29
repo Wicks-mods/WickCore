@@ -119,7 +119,9 @@ end
 --
 -- and then says how it differs from its family's base:
 --
---   media        textures: panel (rounded), ring, the lift (shadow), the
+--   media        textures: panel (rounded), ring, the tile and tileRing
+--                small frames draw in instead (64 px or less; the panel
+--                shape where a look has no tile of its own), the lift (shadow), the
 --                mask for rounded corners (roundmask, the minimap too) and
 --                the one for icons (iconmask)
 --   slice        the 9-slice margin of panel and ring
@@ -223,7 +225,8 @@ Chrome.Styles = {
       font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
       textShadow = true, upper = true, stripe = true, health = { friend = "text", enemy = "fel" },
       media = { rounded = TEX .. "panel-notch.png", ring = TEX .. "ring-notch.png",
-                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
+                tile = TEX .. "panel-square.png", tileRing = TEX .. "ring-tile.png",
+                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 8 },
       glass = 1.25, lift = { alpha = 0.7 }, ringRest = { token = "text", alpha = 0.16 },
       statusbar = TEX .. "bar-edge.png" },
     { id = "frost", name = "Frost", family = "modern", palette = "frost",
@@ -281,6 +284,21 @@ end })
 
 function Chrome:Glyph(name) return TEX .. "glyph-" .. name .. ".png" end
 
+-- The panel and ring textures for a frame: small ones (slots, buttons,
+-- tiles) take the look's tile shape where it has one, since a square icon
+-- inside a shaped tile shows past the shape. A frame not sized yet counts
+-- as a panel.
+function Chrome:IsTile(f)
+    local w, h = f and f.GetSize and f:GetSize()
+    return w and h and w > 0 and h > 0 and w <= 64 and h <= 64
+end
+function Chrome:PanelTex(f)
+    return (self:IsTile(f) and self.Media.tile) or self.Media.rounded
+end
+function Chrome:RingTex(f)
+    return (self:IsTile(f) and self.Media.tileRing) or self.Media.ring
+end
+
 Chrome.FONT_OG = FRIZ
 
 -- The font every Chrome text uses. Chrome.FONT is kept current for
@@ -304,7 +322,7 @@ end
 -- A rounded glass texture in a palette colour, re-tinted with the theme.
 function Chrome:Glass(parent, layer, color, alpha, sub)
     local t = parent:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
-    t:SetTexture(self.Media.rounded)
+    t:SetTexture(self:PanelTex(parent))
     slice(t, self.Media.slice)
     color = color or C.void
     local a = self:GlassAlpha(alpha or color[4] or 1)
@@ -336,7 +354,7 @@ function Chrome:ModernSlot(b, icon)
     if not self:Modern() or not b then return nil end
     if b.ItemSlotBackground then b.ItemSlotBackground:SetAlpha(0) end
     local bg = b:CreateTexture(nil, "BACKGROUND", nil, -7)
-    bg:SetTexture(self.Media.rounded)
+    bg:SetTexture(self.Media.tile or self.Media.rounded)
     slice(bg, self.Media.slice)
     bg:SetAllPoints()
     -- The shadow colour, a step off the panel, so an empty slot (the Free
@@ -350,7 +368,7 @@ function Chrome:ModernSlot(b, icon)
         icon:AddMaskTexture(m)
     end
     local ring = b:CreateTexture(nil, "OVERLAY", nil, 1)
-    ring:SetTexture(self.Media.ring)
+    ring:SetTexture(self.Media.tileRing or self.Media.ring)
     slice(ring, self.Media.slice)
     ring:SetAllPoints()
     ring:Hide()
@@ -378,7 +396,7 @@ end
 -- The rounded ring a modern control shows for hover or selection.
 function Chrome:Ring(parent, color, layer)
     local r = parent:CreateTexture(nil, layer or "BORDER", nil, 2)
-    r:SetTexture(self.Media.ring)
+    r:SetTexture(self:RingTex(parent))
     slice(r, self.Media.slice)
     r:SetAllPoints()
     color = color or C.fel
@@ -450,7 +468,7 @@ local function roundify(f)
             if full then
                 local c = C[info.token]
                 local a = info.alpha or (c and c[4]) or 1
-                r:SetTexture(Chrome.Media.rounded)
+                r:SetTexture(Chrome:PanelTex(f))
                 a = Chrome:GlassAlpha(a)
                 if r.SetTextureSliceMargins then
                     local m = Chrome.Media.slice
@@ -494,7 +512,7 @@ function Chrome:AddBorder(f, color)
         local w, h = f:GetSize()
         if not f.lift and w and h and w >= 150 and h >= 100 then f.lift = self:Lift(f) end
         local ring = f:CreateTexture(nil, "BORDER", nil, 2)
-        ring:SetTexture(self.Media.ring)
+        ring:SetTexture(self:RingTex(f))
         local m = self.Media.slice
         if ring.SetTextureSliceMargins then ring:SetTextureSliceMargins(m, m, m, m) end
         ring:SetAllPoints()
