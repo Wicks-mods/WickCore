@@ -141,6 +141,8 @@ end
 --   stripe       an accent stripe down the left edge of panels
 --   light        light panels with dark text (no black text shadows)
 --   palette      the theme the look comes with, chosen with it
+--   health       unit health bars in the look's colours instead of by
+--                class: { friend = token, enemy = token }
 --
 -- The choice is account-wide, read from the saved variable directly (as
 -- the theme is), and changing it takes a reload: panels are built once.
@@ -202,7 +204,8 @@ Chrome.Styles = {
       blurb = "Loud and graphic: black slabs, thick grey outlines, hard shadows, headings on red tags.",
       font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
       textShadow = true, upper = true, plate = true,
-      corners = "none", edge = false, borderPx = 2, hardShadow = { x = 5, y = -5, alpha = 1 } },
+      corners = "none", edge = false, borderPx = 2, hardShadow = { x = 5, y = -5, alpha = 1 },
+      health = { friend = "text", enemy = "fel" } },
     { id = "gilded", name = "Gilded", family = "modern", palette = "gilded",
       blurb = "Almost no chrome: a dark wash between thin gold rules, serif small capitals, round action buttons.",
       font = F.cormorant, headingFont = F.cormorantSC, uiFont = F.cormorant, bump = up(3), headingBump = 1, uiBump = 3,
@@ -221,7 +224,7 @@ Chrome.Styles = {
     { id = "arena", name = "Arena", family = "modern", palette = "arena",
       blurb = "Esports flat: hard panels with one notched corner, an edge stripe, bold condensed capitals.",
       font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
-      textShadow = true, upper = true, stripe = true,
+      textShadow = true, upper = true, stripe = true, health = { friend = "text", enemy = "fel" },
       media = { rounded = TEX .. "panel-notch.png", ring = TEX .. "ring-notch.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
       glass = 1.25, lift = { alpha = 0.45 } },
