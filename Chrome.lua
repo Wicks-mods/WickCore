@@ -140,7 +140,9 @@ end
 --   stripe       an accent stripe down the left edge of panels
 --   palette      the theme the look comes with, chosen with it
 --   health       unit health bars in the look's colours instead of by
---                class: { friend = token, enemy = token }
+--                class: { friend = token or hex, enemy = token or hex }
+--   statusbar    the bar texture the look draws in, where the player has
+--                left the bar texture on the default
 --
 -- The choice is account-wide, read from the saved variable directly (as
 -- the theme is), and changing it takes a reload: panels are built once.
@@ -228,7 +230,8 @@ Chrome.Styles = {
       textShadow = true, upper = true,
       media = { rounded = TEX .. "panel-square.png", ring = TEX .. "ring-hair.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
-      glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 } },
+      glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
+      health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png" },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
