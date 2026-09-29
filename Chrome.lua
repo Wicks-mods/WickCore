@@ -126,20 +126,28 @@ end
 --   glass        how solid panels are, times the family's own alpha
 --   lift         the lift's colour token (nil for black) and alpha
 --   ringRest     a ring shown at rest in the border's place: token, alpha
---   corners      og: "brackets", "diamonds" or "none"
+--   corners      og: "brackets", "studs" or "none"
 --   edge         og: the black pixel outside the border
 --   double       og: a second border line inside the first
 --   font         the Chrome font; uiFont, when set, is also what Wick's
---                UI's "Wick" font draws in
---   headingFont  headings and titles
---   bump         added to font sizes (PT Sans and Arial Narrow run small)
+--                UI's "Wick" font draws in, uiBump added to its sizes
+--   headingFont  headings and titles, headingBump added to their size
+--   bump         added to font sizes (faces that run small)
 --   textShadow   a firm drop shadow on text
+--   upper        headings in capitals
+--   plate        headings on a plate in the accent
+--   borderPx     og: border thickness
+--   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
+--   stripe       an accent stripe down the left edge of panels
+--   light        light panels with dark text (no black text shadows)
+--   palette      the theme the look comes with, chosen with it
 --
 -- The choice is account-wide, read from the saved variable directly (as
 -- the theme is), and changing it takes a reload: panels are built once.
 local MEDIA = "Interface\\AddOns\\WickCore\\Media\\"
 local TEX = MEDIA .. "Textures\\"
-local PT_SANS = MEDIA .. "Fonts\\PT_Sans-Narrow-Web-Bold.ttf"
+local FONTS = MEDIA .. "Fonts\\"
+local PT_SANS = FONTS .. "PT_Sans-Narrow-Web-Bold.ttf"
 local FRIZ = "Fonts\\FRIZQT__.TTF"
 local ARIALN = "Fonts\\ARIALN.TTF"
 local MORPHEUS = "Fonts\\MORPHEUS.TTF"
@@ -150,12 +158,31 @@ local BASE_MEDIA = {
     shadow    = TEX .. "shadow.png",
     roundmask = TEX .. "roundmask.png",
     iconmask  = TEX .. "roundmask.png",
-    diamond   = TEX .. "diamond.png",
+    stud      = TEX .. "stud.png",
     font      = PT_SANS,
     slice     = 8,
 }
 
 local function modernBump(size) return size + (size <= 11 and 2 or 1) end
+
+-- The open-licensed faces the looks draw in (SIL OFL 1.1, each licence
+-- beside its font in Media/Fonts).
+local F = {
+    rajdhani     = FONTS .. "Rajdhani-SemiBold.ttf",
+    rajdhaniBold = FONTS .. "Rajdhani-Bold.ttf",
+    anton        = FONTS .. "Anton-Regular.ttf",
+    archivo      = FONTS .. "ArchivoNarrow-Bold.ttf",
+    cormorant    = FONTS .. "CormorantGaramond-SemiBold.ttf",
+    cormorantSC  = FONTS .. "CormorantSC-SemiBold.ttf",
+    garamond     = FONTS .. "EBGaramond-Medium.ttf",
+    cinzel       = FONTS .. "Cinzel-Bold.ttf",
+    alegreya     = FONTS .. "Alegreya-Medium.ttf",
+    barlow       = FONTS .. "BarlowCondensed-SemiBold.ttf",
+    barlowBold   = FONTS .. "BarlowCondensed-Bold.ttf",
+    jost         = FONTS .. "Jost-Medium.ttf",
+    jostLight    = FONTS .. "Jost-Regular.ttf",
+}
+local function up(n) return function(size) return size + n end end
 
 Chrome.Styles = {
     { id = "modern", name = "Wick Modern", family = "modern",
@@ -164,25 +191,47 @@ Chrome.Styles = {
     { id = "og", name = "Wick OG", family = "og",
       blurb = "The original: flat panels, a single-pixel border, fel corners.",
       font = FRIZ, corners = "brackets", edge = true },
-    { id = "slate", name = "Slate", family = "og",
-      blurb = "Flat and dense: hard corners, hairline borders, no ornament, condensed type.",
-      font = ARIALN, uiFont = ARIALN, bump = function(size) return size + 1 end,
-      corners = "none", edge = false, compact = true },
-    { id = "obsidian", name = "Obsidian", family = "modern",
-      blurb = "Deep frosted glass: large rounding, a heavy shadow, circular icons.",
-      font = PT_SANS, bump = modernBump, textShadow = true,
-      media = { rounded = TEX .. "panel-r12.png", ring = TEX .. "ring-r12.png",
-                roundmask = TEX .. "panel-r12.png", iconmask = TEX .. "mask-circle.png", slice = 12 },
-      glass = 0.8, lift = { alpha = 0.85 }, ringRest = { token = "border", alpha = 0.7 } },
-    { id = "runic", name = "Runic", family = "og",
-      blurb = "High fantasy, drawn not borrowed: double borders, diamond corners, carved headings.",
-      font = FRIZ, headingFont = MORPHEUS, headingBump = 3, corners = "diamonds", edge = true, double = true },
-    { id = "hologram", name = "Hologram", family = "modern",
-      blurb = "A sci-fi display: cut corners, faint fills, outlines and a glow in the accent.",
-      font = PT_SANS, bump = modernBump, textShadow = true,
+    { id = "hologram", name = "Hologram", family = "modern", palette = "hologram",
+      blurb = "A projected display: faint glass, cut corners, a cyan outline and glow, squared type in capitals.",
+      font = F.rajdhani, headingFont = F.rajdhaniBold, uiFont = F.rajdhani, bump = up(2), uiBump = 2,
+      textShadow = true, upper = true,
       media = { rounded = TEX .. "panel-chamfer.png", ring = TEX .. "ring-chamfer.png",
                 roundmask = TEX .. "mask-chamfer.png", iconmask = TEX .. "mask-chamfer.png" },
-      glass = 0.55, lift = { token = "fel", alpha = 0.3 }, ringRest = { token = "fel", alpha = 0.55 } },
+      glass = 0.55, lift = { token = "fel", alpha = 0.3 }, ringRest = { token = "fel", alpha = 0.6 } },
+    { id = "rebel", name = "Rebel", family = "og", palette = "rebel",
+      blurb = "Loud and graphic: black slabs, thick white outlines, hard shadows, headings on red tags.",
+      font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
+      textShadow = true, upper = true, plate = true,
+      corners = "none", edge = false, borderPx = 2, hardShadow = { x = 5, y = -5, alpha = 1 } },
+    { id = "gilded", name = "Gilded", family = "modern", palette = "gilded",
+      blurb = "Almost no chrome: a dark wash between thin gold rules, serif small capitals, round action buttons.",
+      font = F.cormorant, headingFont = F.cormorantSC, uiFont = F.cormorant, bump = up(3), headingBump = 1, uiBump = 3,
+      textShadow = true,
+      media = { rounded = TEX .. "panel-wash.png", ring = TEX .. "ring-rules.png",
+                iconmask = TEX .. "mask-circle.png", slice = 16 },
+      glass = 0.9, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.5 } },
+    { id = "sepia", name = "Sepia", family = "og", palette = "sepia",
+      blurb = "The light one: flat parchment panels, dark serif text, no ornament.",
+      font = F.garamond, headingFont = F.garamond, uiFont = F.garamond, bump = up(2), uiBump = 2,
+      textShadow = false, light = true, corners = "none", edge = false },
+    { id = "cathedral", name = "Cathedral", family = "og", palette = "cathedral",
+      blurb = "Heavy and gothic: layered frames, blood-red studs at the corners, carved capitals.",
+      font = F.alegreya, headingFont = F.cinzel, uiFont = F.alegreya, bump = up(1), uiBump = 1,
+      textShadow = true, corners = "studs", edge = true, double = true },
+    { id = "arena", name = "Arena", family = "modern", palette = "arena",
+      blurb = "Esports flat: hard panels with one notched corner, an edge stripe, bold condensed capitals.",
+      font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
+      textShadow = true, upper = true, stripe = true,
+      media = { rounded = TEX .. "panel-notch.png", ring = TEX .. "ring-notch.png",
+                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
+      glass = 1.25, lift = { alpha = 0.45 } },
+    { id = "frost", name = "Frost", family = "modern", palette = "frost",
+      blurb = "Cold and sparse: see-through panels, hairline borders, light spaced type.",
+      font = F.jost, headingFont = F.jostLight, uiFont = F.jost, bump = up(1), uiBump = 1,
+      textShadow = true, upper = true,
+      media = { rounded = TEX .. "panel-square.png", ring = TEX .. "ring-hair.png",
+                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
+      glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "border", alpha = 0.9 } },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
@@ -210,6 +259,13 @@ function Chrome:SetStyle(style)
     if type(sv) ~= "table" then return end
     sv.global = sv.global or {}
     sv.global.style = self.StyleByID[style] and style or "modern"
+    -- A look comes with its own colours; they are chosen with it, and can
+    -- be changed afterwards like any theme. Wick Modern and Wick OG keep
+    -- whatever theme is in use.
+    local st = self.StyleByID[style]
+    if st and st.palette and self.SetTheme and self.ThemeByID and self.ThemeByID[st.palette] then
+        self:SetTheme(st.palette)
+    end
     if Core.Store then Core.Store:Dirty() end
 end
 
@@ -231,7 +287,7 @@ function Chrome:Font() return self:StyleDef().font or PT_SANS end
 function Chrome:HeadingFont() local st = self:StyleDef(); return st.headingFont or st.font or PT_SANS end
 
 -- How solid a panel of the family's alpha is in this style.
-function Chrome:GlassAlpha(a) return (a or 1) * (self:StyleDef().glass or 1) end
+function Chrome:GlassAlpha(a) return math.min(1, (a or 1) * (self:StyleDef().glass or 1)) end
 
 -- The corner marks an og-family panel wears.
 function Chrome:Corners() return self:StyleDef().corners or "none" end
@@ -358,6 +414,8 @@ function Chrome:SetFont(fs, size, flags, heading)
     if st.textShadow then
         fs:SetShadowOffset(1, -1)
         fs:SetShadowColor(0, 0, 0, 1)
+    elseif st.light then
+        fs:SetShadowOffset(0, 0)
     end
 end
 
@@ -452,10 +510,11 @@ function Chrome:AddBorder(f, color)
         f.border = { top = proxy, bottom = proxy, left = proxy, right = proxy }
         return
     end
-    local top    = self:Texture(f, "BORDER", color); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT");    top:SetHeight(1)
-    local bot    = self:Texture(f, "BORDER", color); bot:SetPoint("BOTTOMLEFT"); bot:SetPoint("BOTTOMRIGHT"); bot:SetHeight(1)
-    local left   = self:Texture(f, "BORDER", color); left:SetPoint("TOPLEFT");   left:SetPoint("BOTTOMLEFT"); left:SetWidth(1)
-    local right  = self:Texture(f, "BORDER", color); right:SetPoint("TOPRIGHT"); right:SetPoint("BOTTOMRIGHT"); right:SetWidth(1)
+    local px = self:StyleDef().borderPx or 1
+    local top    = self:Texture(f, "BORDER", color); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT");    top:SetHeight(px)
+    local bot    = self:Texture(f, "BORDER", color); bot:SetPoint("BOTTOMLEFT"); bot:SetPoint("BOTTOMRIGHT"); bot:SetHeight(px)
+    local left   = self:Texture(f, "BORDER", color); left:SetPoint("TOPLEFT");   left:SetPoint("BOTTOMLEFT"); left:SetWidth(px)
+    local right  = self:Texture(f, "BORDER", color); right:SetPoint("TOPRIGHT"); right:SetPoint("BOTTOMRIGHT"); right:SetWidth(px)
     f.border = { top = top, bottom = bot, left = left, right = right }
     local w, h = f:GetSize()
     if self:StyleDef().double and w and h and w >= 40 and h >= 30 then
@@ -485,11 +544,11 @@ function Chrome:AddBrackets(parent, resizeButton, color)
     if self:Modern() and not parent.wickPanel then return end
     local corners = self:Modern() and "brackets" or self:Corners()
     if corners == "none" then return end
-    if corners == "diamonds" then
+    if corners == "studs" then
         for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
             local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
             local d = host:CreateTexture(nil, "OVERLAY", nil, 3)
-            d:SetTexture(self.Media.diamond)
+            d:SetTexture(self.Media.stud)
             d:SetSize(9, 9)
             local x = point:find("LEFT") and -1 or 1
             local y = point:find("TOP") and 1 or -1
@@ -593,6 +652,7 @@ function Chrome:NewPanel(name, o)
         self:AddBorder(f)
     end
     f.bg = bg
+    Chrome:PanelExtras(f)
 
     -- Header strip: a band in the original style; in the modern one the
     -- title sits on the glass, with only a faint rule under it.
@@ -845,8 +905,52 @@ end
 
 function Chrome:Heading(parent, text)
     local fs = self:Text(parent, 12, C.fel, nil, true)
-    fs:SetText(text)
+    self:SetHeadingText(fs, text)
     return fs
+end
+
+-- A heading's text in the look's voice: capitals where it writes them,
+-- and on a plate in the accent where it draws one (then the text is the
+-- panel colour, to read on the plate).
+function Chrome:SetHeadingText(fs, text)
+    local st = self:StyleDef()
+    text = tostring(text or "")
+    if st.upper and not text:find("|", 1, true) then text = text:upper() end
+    fs:SetText(text)
+    local parent = st.plate and not fs.wickPlate and fs.GetParent and fs:GetParent()
+    if parent and parent.CreateTexture then
+        local p = parent:CreateTexture(nil, "ARTWORK", nil, -1)
+        p:SetPoint("TOPLEFT", fs, "TOPLEFT", -5, 2)
+        p:SetPoint("BOTTOMRIGHT", fs, "BOTTOMRIGHT", 5, -2)
+        p:SetColorTexture(C.fel[1], C.fel[2], C.fel[3], 1)
+        Chrome:Register(p, C.fel, "texture")
+        fs.wickPlate = p
+        fs:SetTextColor(C.text[1], C.text[2], C.text[3], 1)
+        Chrome:Register(fs, C.text, "text")
+    end
+end
+
+-- What a look adds to a big panel: a solid offset shadow (Rebel) and an
+-- accent stripe down its left edge (Arena).
+function Chrome:PanelExtras(f)
+    local st = self:StyleDef()
+    if st.hardShadow and not f.wickHardShadow then
+        local h = st.hardShadow
+        local sh = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+        sh:SetPoint("TOPLEFT", f, "TOPLEFT", h.x, h.y)
+        sh:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", h.x, h.y)
+        sh:SetColorTexture(0, 0, 0, h.alpha or 1)
+        f.wickHardShadow = sh
+    end
+    if st.stripe and not f.wickStripe then
+        local s = f:CreateTexture(nil, "BORDER", nil, 3)
+        s:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -1)
+        s:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 1)
+        s:SetWidth(3)
+        s:SetColorTexture(C.text[1], C.text[2], C.text[3], 1)
+        Chrome:Register(s, C.text, "texture")
+        f.wickStripe = s
+    end
 end
 
 -- A 1px rule. In the modern style it is the accent at half strength, the

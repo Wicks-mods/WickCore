@@ -43,6 +43,16 @@ local CLASSIC_HEX = {
     WARRIOR = "C79C6E", PALADIN = "F58CBA", HUNTER = "ABD473", ROGUE = "FFF569", PRIEST = "FFFFFF",
     SHAMAN = "0070DE", MAGE = "69CCF0", WARLOCK = "9482C9", DRUID = "FF7D0A",
 }
+-- The looks' palettes: accent, panel, second panel, border, text.
+local LOOK_PALETTES = {
+    { id = "hologram",  name = "Hologram",  fel = "3FE0FF", void = "04111A", shadow = "0B2230", border = "1D6E86", text = "CDEFF7" },
+    { id = "rebel",     name = "Rebel",     fel = "E5091A", void = "0B0B0B", shadow = "1D1D1D", border = "F2F2F2", text = "FFFFFF" },
+    { id = "gilded",    name = "Gilded",    fel = "D4B66A", void = "0B0A08", shadow = "17140F", border = "6E5F3E", text = "E3D9C0" },
+    { id = "sepia",     name = "Sepia",     fel = "8C3B2A", void = "DAD4BD", shadow = "C7C0A8", border = "7A7462", text = "3E3A30" },
+    { id = "cathedral", name = "Cathedral", fel = "C0392B", void = "120C0B", shadow = "221816", border = "5C3A2C", text = "D9CBB0" },
+    { id = "arena",     name = "Arena",     fel = "FF5263", void = "111B25", shadow = "1C2834", border = "2E3B47", text = "ECE8E1" },
+    { id = "frost",     name = "Frost",     fel = "8FD3FF", void = "0B1117", shadow = "131C24", border = "3C5566", text = "E6F1F7" },
+}
 local CLASS_ORDER = { "SHAMAN", "DRUID", "HUNTER", "MAGE", "PRIEST", "PALADIN", "ROGUE", "WARRIOR" }
 
 -- "client" reads the game's table; "classic" uses the Classic-era codes.
@@ -152,6 +162,12 @@ local function buildThemes()
     for _, token in ipairs(CLASS_ORDER) do
         local name = token:sub(1, 1) .. token:sub(2):lower()
         add({ id = token:lower(), name = name, class = token, colors = derive(classAccent(token), token) })
+    end
+    -- The looks' own palettes, chosen with the look (Chrome.Styles).
+    for _, look in ipairs(LOOK_PALETTES) do
+        add({ id = look.id, name = look.name, look = true,
+              colors = { fel = rgb(look.fel), void = rgb(look.void), shadow = rgb(look.shadow),
+                         border = rgb(look.border), text = rgb(look.text) } })
     end
     local cc = Chrome.customColors
     local h, s = rgbToHsl(rgb(cc.main))

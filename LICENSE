@@ -26,6 +26,12 @@ Bundled font: PT Sans Narrow (Media/Fonts) is copyright ParaType Ltd. and is
 bundled unmodified under the SIL Open Font License 1.1
 (Media/Fonts/PT_Sans_Narrow_OFL.txt), not the MIT terms above.
 
+The looks' fonts in Media/Fonts are bundled unmodified under the SIL Open
+Font License 1.1, each with its licence beside it, not the MIT terms above:
+Alegreya, Anton, Archivo Narrow, Barlow Condensed, Cinzel, Cormorant
+Garamond, Cormorant SC, EB Garamond, Jost and Rajdhani, copyright their
+respective project authors (see each *_OFL.txt).
+
 The "Wick", "WickCore", "Wick's Mods", and associated wordmark, logomark, and
 brand chrome (fel-green L-bracket corners, locked palette) are trademarks of
 Wick and are NOT licensed under the MIT terms above. See TRADEMARK.md in the
