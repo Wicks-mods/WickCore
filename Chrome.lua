@@ -139,7 +139,6 @@ end
 --   borderPx     og: border thickness
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
 --   stripe       an accent stripe down the left edge of panels
---   light        light panels with dark text (no black text shadows)
 --   palette      the theme the look comes with, chosen with it
 --   health       unit health bars in the look's colours instead of by
 --                class: { friend = token, enemy = token }
@@ -176,7 +175,6 @@ local F = {
     archivo      = FONTS .. "ArchivoNarrow-Bold.ttf",
     cormorant    = FONTS .. "CormorantGaramond-SemiBold.ttf",
     cormorantSC  = FONTS .. "CormorantSC-SemiBold.ttf",
-    garamond     = FONTS .. "EBGaramond-Medium.ttf",
     cinzel       = FONTS .. "Cinzel-Bold.ttf",
     alegreya     = FONTS .. "Alegreya-Medium.ttf",
     barlow       = FONTS .. "BarlowCondensed-SemiBold.ttf",
@@ -213,10 +211,6 @@ Chrome.Styles = {
       media = { rounded = TEX .. "panel-wash.png", ring = TEX .. "ring-rules.png",
                 iconmask = TEX .. "mask-circle.png", slice = 16 },
       glass = 0.9, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.5 } },
-    { id = "sepia", name = "Sepia", family = "og", palette = "sepia",
-      blurb = "The light one: flat parchment panels, dark serif text, no ornament.",
-      font = F.garamond, headingFont = F.garamond, uiFont = F.garamond, bump = up(2), uiBump = 2,
-      textShadow = false, light = true, corners = "none", edge = false },
     { id = "cathedral", name = "Cathedral", family = "og", palette = "cathedral",
       blurb = "Heavy and gothic: layered frames, blood-red studs at the corners, carved capitals.",
       font = F.alegreya, headingFont = F.cinzel, uiFont = F.alegreya, bump = up(1), uiBump = 1,
@@ -417,8 +411,6 @@ function Chrome:SetFont(fs, size, flags, heading)
     if st.textShadow then
         fs:SetShadowOffset(1, -1)
         fs:SetShadowColor(0, 0, 0, 1)
-    elseif st.light then
-        fs:SetShadowOffset(0, 0)
     end
 end
 
