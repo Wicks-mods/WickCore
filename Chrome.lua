@@ -126,9 +126,8 @@ end
 --   glass        how solid panels are, times the family's own alpha
 --   lift         the lift's colour token (nil for black) and alpha
 --   ringRest     a ring shown at rest in the border's place: token, alpha
---   corners      og: "brackets", "studs" or "none"
+--   corners      og: "brackets" or "none"
 --   edge         og: the black pixel outside the border
---   double       og: a second border line inside the first
 --   font         the Chrome font; uiFont, when set, is also what Wick's
 --                UI's "Wick" font draws in, uiBump added to its sizes
 --   headingFont  headings and titles, headingBump added to their size
@@ -159,7 +158,6 @@ local BASE_MEDIA = {
     shadow    = TEX .. "shadow.png",
     roundmask = TEX .. "roundmask.png",
     iconmask  = TEX .. "roundmask.png",
-    stud      = TEX .. "stud.png",
     font      = PT_SANS,
     slice     = 8,
 }
@@ -175,8 +173,6 @@ local F = {
     archivo      = FONTS .. "ArchivoNarrow-Bold.ttf",
     cormorant    = FONTS .. "CormorantGaramond-SemiBold.ttf",
     cormorantSC  = FONTS .. "CormorantSC-SemiBold.ttf",
-    cinzel       = FONTS .. "Cinzel-Bold.ttf",
-    alegreya     = FONTS .. "Alegreya-Medium.ttf",
     barlow       = FONTS .. "BarlowCondensed-SemiBold.ttf",
     barlowBold   = FONTS .. "BarlowCondensed-Bold.ttf",
     jost         = FONTS .. "Jost-Medium.ttf",
@@ -211,10 +207,6 @@ Chrome.Styles = {
       media = { rounded = TEX .. "panel-wash.png", ring = TEX .. "ring-rules.png",
                 iconmask = TEX .. "mask-circle.png", slice = 16 },
       glass = 0.9, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.5 } },
-    { id = "cathedral", name = "Cathedral", family = "og", palette = "cathedral",
-      blurb = "Heavy and gothic: layered frames, blood-red studs at the corners, carved capitals.",
-      font = F.alegreya, headingFont = F.cinzel, uiFont = F.alegreya, bump = up(1), uiBump = 1,
-      textShadow = true, corners = "studs", edge = true, double = true },
     { id = "arena", name = "Arena", family = "modern", palette = "arena",
       blurb = "Esports flat: hard panels with one notched corner, an edge stripe, bold condensed capitals.",
       font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
@@ -511,21 +503,6 @@ function Chrome:AddBorder(f, color)
     local left   = self:Texture(f, "BORDER", color); left:SetPoint("TOPLEFT");   left:SetPoint("BOTTOMLEFT"); left:SetWidth(px)
     local right  = self:Texture(f, "BORDER", color); right:SetPoint("TOPRIGHT"); right:SetPoint("BOTTOMRIGHT"); right:SetWidth(px)
     f.border = { top = top, bottom = bot, left = left, right = right }
-    local w, h = f:GetSize()
-    if self:StyleDef().double and w and h and w >= 40 and h >= 30 then
-        -- The inner line of a double border, fainter, 2px in.
-        local inner = {}
-        for _, side in ipairs({ "top", "bottom", "left", "right" }) do
-            local t = self:Texture(f, "BORDER", C.border)
-            t:SetAlpha(0.55)
-            inner[side] = t
-        end
-        inner.top:SetPoint("TOPLEFT", 3, -3); inner.top:SetPoint("TOPRIGHT", -3, -3); inner.top:SetHeight(1)
-        inner.bottom:SetPoint("BOTTOMLEFT", 3, 3); inner.bottom:SetPoint("BOTTOMRIGHT", -3, 3); inner.bottom:SetHeight(1)
-        inner.left:SetPoint("TOPLEFT", 3, -3); inner.left:SetPoint("BOTTOMLEFT", 3, 3); inner.left:SetWidth(1)
-        inner.right:SetPoint("TOPRIGHT", -3, -3); inner.right:SetPoint("BOTTOMRIGHT", -3, 3); inner.right:SetWidth(1)
-        f.innerBorder = inner
-    end
 end
 
 -- Fel-green L-brackets. If a resizeButton is passed the BOTTOMRIGHT bracket
@@ -539,21 +516,6 @@ function Chrome:AddBrackets(parent, resizeButton, color)
     if self:Modern() and not parent.wickPanel then return end
     local corners = self:Modern() and "brackets" or self:Corners()
     if corners == "none" then return end
-    if corners == "studs" then
-        for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
-            local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
-            local d = host:CreateTexture(nil, "OVERLAY", nil, 3)
-            d:SetTexture(self.Media.stud)
-            d:SetSize(9, 9)
-            local x = point:find("LEFT") and -1 or 1
-            local y = point:find("TOP") and 1 or -1
-            d:SetPoint("CENTER", host, point, x * 0.5, y * 0.5)
-            d:SetVertexColor(color[1], color[2], color[3], 1)
-            Chrome:Register(d, color, "vertex", 1)
-            parent.brackets[point] = { d }
-        end
-        return
-    end
     for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
         local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
         local h = self:Texture(host, "OVERLAY", color)
