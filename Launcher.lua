@@ -73,12 +73,26 @@ function Launcher:EnsureMinimapButton()
     icon:SetPoint("BOTTOMRIGHT", -6, 6)
     b.icon = icon
 
+    -- Round maps put the button on a circle just outside the edge; a square
+    -- map (a UI replacement says so through GetMinimapShape, as LibDBIcon
+    -- expects) puts it just inside the square's edge, at the same angle.
     local function place()
         local angle = math.rad(db.angle or 220)
-        local r = (Minimap:GetWidth() / 2) + 6
+        local c, s = math.cos(angle), math.sin(angle)
+        local half = Minimap:GetWidth() / 2
+        local x, y
+        local shape = rawget(_G, "GetMinimapShape")
+        if shape and shape() == "SQUARE" then
+            local m = math.max(math.abs(c), math.abs(s))
+            local r = half - 16
+            x, y = c / m * r, s / m * r
+        else
+            x, y = c * (half + 6), s * (half + 6)
+        end
         b:ClearAllPoints()
-        b:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * r, math.sin(angle) * r)
+        b:SetPoint("CENTER", Minimap, "CENTER", x, y)
     end
+    self.PlaceMinimapButton = place
 
     b:SetScript("OnDragStart", function(s)
         s.dragging = true
