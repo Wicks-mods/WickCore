@@ -204,7 +204,7 @@ Chrome.Styles = {
       blurb = "Loud and graphic: black slabs, thick grey outlines, hard shadows, headings on red tags.",
       font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
       textShadow = true, upper = true, plate = true,
-      corners = "none", edge = false, borderPx = 2, hardShadow = { x = 5, y = -5, alpha = 1 },
+      corners = "none", edge = false, borderPx = 2, hardShadow = { x = 3, y = -3, alpha = 1 },
       health = { friend = "text", enemy = "fel" } },
     { id = "gilded", name = "Gilded", family = "modern", palette = "gilded",
       blurb = "Almost no chrome: a dark wash between thin gold rules, serif small capitals, round action buttons.",
