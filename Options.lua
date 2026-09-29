@@ -52,7 +52,12 @@ local function ensureRoot()
             end
         end
         y = y - 12
-        Options:ThemeSection(f, 16, y)
+        local ty = Options:ThemeSection(f, 16, y)
+        if rawget(_G, "WicksUI") or (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("WicksUI")) then
+            local shared = Chrome:Text(f, 10, Chrome.Colors.muted)
+            shared:SetPoint("TOPLEFT", 16, ty - 4)
+            shared:SetText("Wick's UI shows these same settings on its General page.")
+        end
 
         local client = Chrome:Text(f, 11, Chrome.Colors.muted)
         client:SetPoint("BOTTOMLEFT", 16, 16)
@@ -72,7 +77,11 @@ end
 
 -- Theme picker: one swatch per theme, the active one bracketed in its own
 -- accent, plus a check to follow the player's class.
-function Options:ThemeSection(parent, x, y)
+-- opts.width wraps the swatches to fit; opts.noExtras leaves out the class
+-- colour and style checks, for a host (Wick's UI) that shows them itself.
+-- Everything here is saved in WickCore and shared by the whole suite.
+function Options:ThemeSection(parent, x, y, opts)
+    opts = opts or {}
     local C = Chrome.Colors
     local head = Chrome:Heading(parent, "Theme")
     head:SetPoint("TOPLEFT", x, y)
@@ -96,11 +105,13 @@ function Options:ThemeSection(parent, x, y)
         end
     end
     local SW = 52
+    local perRow = opts.width and math.max(1, math.floor((opts.width + 5) / (SW + 5))) or #Chrome.Themes
     for i, def in ipairs(Chrome.Themes) do
         local id = def.id
         local b = CreateFrame("Button", nil, parent)
         b:SetSize(SW, 40)
-        b:SetPoint("TOPLEFT", x + (i - 1) * (SW + 5), y)
+        local col, row = (i - 1) % perRow, math.floor((i - 1) / perRow)
+        b:SetPoint("TOPLEFT", x + col * (SW + 5), y - row * 46)
         local bg = b:CreateTexture(nil, "BACKGROUND")
         bg:SetPoint("TOPLEFT", 0, 0); bg:SetPoint("BOTTOMRIGHT", 0, 14)
         local strip = b:CreateTexture(nil, "ARTWORK")
@@ -141,7 +152,7 @@ function Options:ThemeSection(parent, x, y)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         swatches[#swatches + 1] = b
     end
-    y = y - 46
+    y = y - 46 * math.ceil(#Chrome.Themes / perRow)
 
     -- Custom theme colors: two picker buttons that open Blizzard's color picker.
     local function hexToRGB(h) return tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 end
@@ -212,6 +223,11 @@ function Options:ThemeSection(parent, x, y)
     parent.themeNote = Chrome:Text(parent, 10, C.muted)
     parent.themeNote:SetPoint("LEFT", parent.themeAuto, "RIGHT", 20, 0)
     y = y - 22
+    if opts.noExtras then
+        refresh()
+        Chrome:OnThemeChanged(refresh)
+        return y
+    end
     parent.themeClassic = Chrome:Check(parent, "Classic-era class colors (the set TBC UIs show)",
         function() return Chrome.classColorSet == "classic" end,
         function(v) Chrome:SetClassColorSet(v and "classic" or "client"); refresh() end)
