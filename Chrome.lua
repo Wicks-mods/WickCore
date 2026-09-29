@@ -135,6 +135,7 @@ end
 --   textShadow   a firm drop shadow on text
 --   upper        headings in capitals
 --   plate        headings on a plate in the accent
+--   dash         a short line in the accent before each heading
 --   borderPx     og: border thickness
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
 --   stripe       an accent stripe down the left edge of panels
@@ -231,7 +232,7 @@ Chrome.Styles = {
       media = { rounded = TEX .. "panel-square.png", ring = TEX .. "ring-hair.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
       glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
-      health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png" },
+      health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
@@ -884,6 +885,13 @@ function Chrome:SetHeadingText(fs, text)
     local st = self:StyleDef()
     text = tostring(text or "")
     if st.upper and not text:find("|", 1, true) then text = text:upper() end
+    if st.dash and text ~= "" then
+        -- A 14 by 1 line in the accent, drawn into the text so it sits
+        -- right wherever the heading is placed.
+        local c = C.fel
+        text = ("|TInterface\\Buttons\\WHITE8X8:1:14:0:0:8:8:0:8:0:8:%d:%d:%d|t   "):format(
+            math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5)) .. text
+    end
     fs:SetText(text)
     local parent = st.plate and not fs.wickPlate and fs.GetParent and fs:GetParent()
     if parent and parent.CreateTexture then
