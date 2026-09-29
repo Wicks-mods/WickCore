@@ -301,10 +301,31 @@ function Chrome:RingTex(f)
     return (self:IsTile(f) and self.Media.tileRing) or self.Media.ring
 end
 
+-- An icon of the suite's own in a look with an icon tab: its top edge is
+-- moved down to the tab, its sides and bottom kept, so the whole picture is
+-- drawn a little shorter below the tile's shaped top. Returns true when it
+-- did, and the icon's mask then covers all of it.
+function Chrome:TabIcon(icon, tile)
+    local tab = self:Modern() and self:StyleDef().iconTab
+    if not (tab and icon and tile and icon.GetNumPoints) then return false end
+    local l, r, b = 0, 0, 0
+    for i = 1, icon:GetNumPoints() do
+        local p, _, _, x, y = icon:GetPoint(i)
+        if p == "TOPLEFT" then l = x or 0
+        elseif p == "BOTTOMRIGHT" then r, b = x or 0, y or 0 end
+    end
+    icon:ClearAllPoints()
+    icon:SetPoint("TOPLEFT", tile, "TOPLEFT", l, -tab)
+    icon:SetPoint("BOTTOMRIGHT", tile, "BOTTOMRIGHT", r, b)
+    return true
+end
+
 -- Where an icon's mask sits: over the whole icon, or, in a look with an
--- icon tab, over all of it but the top few pixels. The picture is cut, not
--- squashed, and keeps its width; the tile's shaped top shows above it.
--- inset: how far the icon already sits inside its tile's top.
+-- icon tab, over all of it but the top few pixels. This is for icons that
+-- are Blizzard's, which are not moved: the picture is cut, keeping its
+-- width, and the tile's shaped top shows above it. The suite's own icons
+-- are drawn shorter instead (TabIcon). inset: how far the icon already
+-- sits inside its tile's top.
 function Chrome:PlaceIconMask(m, icon, inset)
     m:ClearAllPoints()
     local tab = self:Modern() and self:StyleDef().iconTab
@@ -381,7 +402,8 @@ function Chrome:ModernSlot(b, icon)
     if icon and icon.AddMaskTexture and b.CreateMaskTexture then
         local m = b:CreateMaskTexture()
         m:SetTexture(self.Media.iconmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-        self:PlaceIconMask(m, icon)
+        self:TabIcon(icon, b)
+        m:SetAllPoints(icon)
         icon:AddMaskTexture(m)
     end
     local ring = b:CreateTexture(nil, "OVERLAY", nil, 1)
