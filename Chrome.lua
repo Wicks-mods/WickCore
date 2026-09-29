@@ -465,11 +465,13 @@ function Chrome:NewPanel(name, o)
     header:SetPoint("TOPLEFT", 1, -1)
     header:SetPoint("TOPRIGHT", -1, -1)
     header:SetHeight(H)
-    local sep = self:Texture(f, "ARTWORK", C.border)
-    sep:SetPoint("TOPLEFT", 1, -H - 1)
-    sep:SetPoint("TOPRIGHT", -1, -H - 1)
+    -- The rule under the title: in the modern style the accent at half
+    -- strength, inset a little, as the character sheet's headings draw it.
+    local sep = self:Texture(f, "ARTWORK", modern and C.fel or C.border)
+    sep:SetPoint("TOPLEFT", modern and 7 or 1, -H - 1)
+    sep:SetPoint("TOPRIGHT", modern and -7 or -1, -H - 1)
     sep:SetHeight(1)
-    if modern then header:Hide(); sep:SetAlpha(0.35) end
+    if modern then header:Hide(); sep:SetAlpha(0.5) end
     f.header = header
 
     f.title = self:Text(f, 12)
@@ -711,9 +713,12 @@ function Chrome:Heading(parent, text)
     return fs
 end
 
+-- A 1px rule. In the modern style it is the accent at half strength, the
+-- rule the character sheet's headings and Wick's Bags draw.
 function Chrome:Divider(parent)
-    local t = self:Texture(parent, "ARTWORK", C.border)
+    local modern = self:Modern()
+    local t = self:Texture(parent, "ARTWORK", modern and C.fel or C.border)
     t:SetHeight(1)
-    if self:Modern() then t:SetAlpha(0.5) end
+    if modern then t:SetAlpha(0.5) end
     return t
 end
