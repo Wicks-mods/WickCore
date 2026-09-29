@@ -199,7 +199,7 @@ Chrome.Styles = {
                 roundmask = TEX .. "mask-chamfer.png", iconmask = TEX .. "mask-chamfer.png" },
       glass = 0.55, lift = { token = "fel", alpha = 0.3 }, ringRest = { token = "fel", alpha = 0.6 } },
     { id = "rebel", name = "Rebel", family = "og", palette = "rebel",
-      blurb = "Loud and graphic: black slabs, thick white outlines, hard shadows, headings on red tags.",
+      blurb = "Loud and graphic: black slabs, thick grey outlines, hard shadows, headings on red tags.",
       font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
       textShadow = true, upper = true, plate = true,
       corners = "none", edge = false, borderPx = 2, hardShadow = { x = 5, y = -5, alpha = 1 } },

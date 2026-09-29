@@ -46,7 +46,7 @@ local CLASSIC_HEX = {
 -- The looks' palettes: accent, panel, second panel, border, text.
 local LOOK_PALETTES = {
     { id = "hologram",  name = "Hologram",  fel = "3FE0FF", void = "04111A", shadow = "0B2230", border = "1D6E86", text = "CDEFF7" },
-    { id = "rebel",     name = "Rebel",     fel = "E5091A", void = "0B0B0B", shadow = "1D1D1D", border = "F2F2F2", text = "FFFFFF" },
+    { id = "rebel",     name = "Rebel",     fel = "E5091A", void = "0B0B0B", shadow = "1D1D1D", border = "5E5E5E", text = "E6E6E6" },
     { id = "gilded",    name = "Gilded",    fel = "D4B66A", void = "0B0A08", shadow = "17140F", border = "6E5F3E", text = "E3D9C0" },
     { id = "sepia",     name = "Sepia",     fel = "8C3B2A", void = "DAD4BD", shadow = "C7C0A8", border = "7A7462", text = "3E3A30" },
     { id = "cathedral", name = "Cathedral", fel = "C0392B", void = "120C0B", shadow = "221816", border = "5C3A2C", text = "D9CBB0" },
