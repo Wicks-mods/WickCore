@@ -142,6 +142,9 @@ end
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
 --   stripe       an accent stripe down the left edge of panels
 --   palette      the theme the look comes with, chosen with it
+--   iconTab      icons start this far below their tile's top, so the
+--                tile's shaped top shows above them as a tab (Arena's
+--                folders: its 6 px notch and 1 px under it)
 --   health       unit health bars in the look's colours instead of by
 --                class: { friend = token or hex, enemy = token or hex }
 --   statusbar    the bar texture the look draws in, where the player has
@@ -223,9 +226,8 @@ Chrome.Styles = {
     { id = "arena", name = "Arena", family = "modern", palette = "arena",
       blurb = "Esports flat: hard panels with one notched corner, an edge stripe, bold condensed capitals.",
       font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
-      textShadow = true, upper = true, stripe = true, health = { friend = "text", enemy = "fel" },
+      textShadow = true, upper = true, stripe = true, iconTab = 7, health = { friend = "text", enemy = "fel" },
       media = { rounded = TEX .. "panel-notch.png", ring = TEX .. "ring-notch.png",
-                tile = TEX .. "panel-square.png", tileRing = TEX .. "ring-tile.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 8 },
       glass = 1.25, lift = { alpha = 0.7 }, ringRest = { token = "text", alpha = 0.16 },
       statusbar = TEX .. "bar-edge.png" },
@@ -299,6 +301,21 @@ function Chrome:RingTex(f)
     return (self:IsTile(f) and self.Media.tileRing) or self.Media.ring
 end
 
+-- Where an icon's mask sits: over the whole icon, or, in a look with an
+-- icon tab, over all of it but the top few pixels. The picture is cut, not
+-- squashed, and keeps its width; the tile's shaped top shows above it.
+-- inset: how far the icon already sits inside its tile's top.
+function Chrome:PlaceIconMask(m, icon, inset)
+    m:ClearAllPoints()
+    local tab = self:Modern() and self:StyleDef().iconTab
+    if tab then
+        m:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, -math.max(0, tab - (inset or 0)))
+        m:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 0, 0)
+    else
+        m:SetAllPoints(icon)
+    end
+end
+
 Chrome.FONT_OG = FRIZ
 
 -- The font every Chrome text uses. Chrome.FONT is kept current for
@@ -364,7 +381,7 @@ function Chrome:ModernSlot(b, icon)
     if icon and icon.AddMaskTexture and b.CreateMaskTexture then
         local m = b:CreateMaskTexture()
         m:SetTexture(self.Media.iconmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-        m:SetAllPoints(icon)
+        self:PlaceIconMask(m, icon)
         icon:AddMaskTexture(m)
     end
     local ring = b:CreateTexture(nil, "OVERLAY", nil, 1)
