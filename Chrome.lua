@@ -194,8 +194,10 @@ function Chrome:ModernSlot(b, icon)
     bg:SetTexture(self.Media.rounded)
     slice(bg, 8)
     bg:SetAllPoints()
-    bg:SetVertexColor(C.void[1], C.void[2], C.void[3], 0.9)
-    Chrome:Register(bg, C.void, "vertex", 0.9)
+    -- The shadow colour, a step off the panel, so an empty slot (the Free
+    -- tile) still reads as a tile.
+    bg:SetVertexColor(C.shadow[1], C.shadow[2], C.shadow[3], 0.95)
+    Chrome:Register(bg, C.shadow, "vertex", 0.95)
     if icon and icon.AddMaskTexture and b.CreateMaskTexture then
         local m = b:CreateMaskTexture()
         m:SetTexture(self.Media.roundmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
