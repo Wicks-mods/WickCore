@@ -145,7 +145,8 @@ end
 --                colour, share of the height, centred on the left edge
 --                (and the right with sides)
 --   rivets       a rivet in each corner of big panels
---   palette      the theme the look comes with, chosen with it
+--   palette      the theme the look comes with, chosen with it ("auto":
+--                the player's class, as Wick Modern and Wick OG have)
 --   sheen        a gradient laid over panels (not tiles): the accent (or
 --                { token }) at { top } alpha along the top, black at
 --                { bottom } alpha
@@ -211,10 +212,10 @@ Chrome.Fonts = F
 local function up(n) return function(size) return size + n end end
 
 Chrome.Styles = {
-    { id = "modern", name = "Wick Modern", family = "modern",
+    { id = "modern", name = "Wick Modern", family = "modern", palette = "auto",
       blurb = "Rounded glass on a soft shadow, the Wick font, no border lines.",
       font = PT_SANS, bump = modernBump, textShadow = true },
-    { id = "og", name = "Wick OG", family = "og",
+    { id = "og", name = "Wick OG", family = "og", palette = "auto",
       blurb = "The original: flat panels, a single-pixel border, fel corners.",
       font = FRIZ, corners = "brackets", edge = true },
     { id = "hologram", name = "Hologram", family = "modern", palette = "hologram",
@@ -298,7 +299,7 @@ function Chrome:SetStyle(style)
     -- be changed afterwards like any theme. Wick Modern and Wick OG keep
     -- whatever theme is in use.
     local st = self.StyleByID[style]
-    if st and st.palette and self.SetTheme and self.ThemeByID and self.ThemeByID[st.palette] then
+    if st and st.palette and self.SetTheme and (st.palette == "auto" or (self.ThemeByID and self.ThemeByID[st.palette])) then
         self:SetTheme(st.palette)
     end
     if Core.Store then Core.Store:Dirty() end

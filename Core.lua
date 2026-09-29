@@ -258,7 +258,7 @@ Core.self = Core:NewAddon("WickCore", {
         global = {
             minimap = { angle = 220, hidden = false },
             debug   = false,
-            theme   = "fel",     -- a theme id, or "auto" for the class theme
+            theme   = "auto",    -- a theme id, or "auto" for the class theme (the default)
             classColors = "client",  -- "client" or "classic" for the TBC-era codes
             custom  = { main = "383058", accent = "4FC778" },  -- the Custom theme's two colors
         },

@@ -209,13 +209,17 @@ function Chrome:RebuildThemes()
     if active and self.ThemeByID[active] then self:ApplyTheme(active) end
 end
 
+-- Fel is the theme anything unknown falls back to; the setting a new
+-- install starts on is the player's class, as Wick Modern and Wick OG are
+-- drawn in by default.
 Chrome.DEFAULT_THEME = "fel"
+Chrome.DEFAULT_SETTING = "auto"
 Chrome.activeTheme = Chrome.DEFAULT_THEME
 
 -- The player's choice lives here first. The saved variable is written on
 -- every change and again at logout, so a change made before the profile
 -- was bound still survives the session.
-Chrome.themeSetting = Chrome.DEFAULT_THEME
+Chrome.themeSetting = Chrome.DEFAULT_SETTING
 
 -- What the client handed us before any of our own code touched it. If the
 -- saved variable is missing here, the client never loaded the file and no
@@ -344,7 +348,7 @@ function Chrome:SetClassColorSet(which)
 end
 
 function Chrome:ThemeSetting()
-    return self.themeSetting or self.DEFAULT_THEME
+    return self.themeSetting or self.DEFAULT_SETTING
 end
 
 -- What is actually on disk right now, for diagnosing a lost setting.
@@ -359,7 +363,7 @@ function Chrome:ApplySavedTheme(source)
     -- Did we actually read a choice, or are we falling back? The two must
     -- not be treated alike, because this function saves at the end.
     local stored = global and global.theme
-    local setting = stored or self.DEFAULT_THEME
+    local setting = stored or self.DEFAULT_SETTING
     -- Trace for /wickcore theme, so a silent failure is visible.
     self.applyLog = (self.applyLog and (self.applyLog .. ", ") or "")
         .. tostring(source or "init") .. "=" .. tostring(setting)

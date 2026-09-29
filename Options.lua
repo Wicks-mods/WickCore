@@ -99,7 +99,6 @@ function Options:ThemeSection(parent, x, y, opts)
             sw.ring:SetShown(on)
             sw.label:SetTextColor(on and C.fel[1] or C.muted[1], on and C.fel[2] or C.muted[2], on and C.fel[3] or C.muted[3], 1)
         end
-        if parent.themeAuto then parent.themeAuto.Refresh() end
         if parent.themeNote then
             local t = Chrome.ThemeByID[Chrome.activeTheme]
             parent.themeNote:SetText(setting == "auto" and ("Following your class: " .. (t and t.name or "?"))
@@ -143,7 +142,14 @@ function Options:ThemeSection(parent, x, y, opts)
             ring:SetColorTexture(t.colors.fel[1], t.colors.fel[2], t.colors.fel[3], 1)
         end
         b.Paint()
-        b:SetScript("OnClick", function() Chrome:SetTheme(id); refresh() end)
+        -- Your own class's swatch follows your class, so each character
+        -- takes its own; any other swatch is that theme for all of them.
+        b:SetScript("OnClick", function()
+            local _, token = UnitClass("player")
+            local t = Chrome.ThemeByID[id]
+            Chrome:SetTheme((t and t.class and t.class == token) and "auto" or id)
+            refresh()
+        end)
         b:SetScript("OnEnter", function()
             local t = b.theme
             GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
@@ -219,12 +225,8 @@ function Options:ThemeSection(parent, x, y, opts)
     end)
     parent.themePickers = pickers
     y = y - 26
-    parent.themeAuto = Chrome:Check(parent, "Follow my class",
-        function() return Chrome:ThemeSetting() == "auto" end,
-        function(v) Chrome:SetTheme(v and "auto" or Chrome.activeTheme); refresh() end)
-    parent.themeAuto:SetPoint("TOPLEFT", x, y)
     parent.themeNote = Chrome:Text(parent, 10, C.muted)
-    parent.themeNote:SetPoint("LEFT", parent.themeAuto, "RIGHT", 20, 0)
+    parent.themeNote:SetPoint("TOPLEFT", x, y - 4)
     y = y - 22
     if opts.noExtras then
         refresh()
