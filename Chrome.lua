@@ -249,7 +249,7 @@ Chrome.Styles = {
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
       glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
       health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true,
-      sheen = { top = 0.16, bottom = 0.35 } },
+      sheen = { top = 0.32, bottom = 0.35 } },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
