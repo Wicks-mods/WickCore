@@ -236,12 +236,30 @@ function Options:ThemeSection(parent, x, y, opts)
     y = y - 22
     -- The shape the whole suite is drawn in. Panels are built once, so a
     -- change is saved and the interface reloaded.
-    parent.themeStyle = Chrome:Check(parent, "Wick Modern style (rounded glass, the Wick font). Off is Wick OG",
-        function() return Chrome:Modern() end,
-        function(v) Chrome:SetStyle(v and "modern" or "og"); ReloadUI() end)
-    parent.themeStyle:SetPoint("TOPLEFT", x, y)
-    parent.themeStyle:SetWidth(420)
-    y = y - 22
+    local styleHead = Chrome:Text(parent, 11, C.muted)
+    styleHead:SetPoint("TOPLEFT", x, y - 4)
+    styleHead:SetText("Style:")
+    local current = Chrome:StyleID()
+    for i, st in ipairs(Chrome.Styles) do
+        local b = Chrome:Button(parent, st.name, 76, 20)
+        local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+        b:SetPoint("TOPLEFT", x + 44 + col * 80, y - row * 24)
+        if st.id == current then b.label:SetTextColor(C.fel[1], C.fel[2], C.fel[3], 1) end
+        b:HookScript("OnEnter", function()
+            GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
+            GameTooltip:SetText(st.name, 1, 1, 1)
+            GameTooltip:AddLine(st.blurb, 0.8, 0.8, 0.8, true)
+            GameTooltip:AddLine("Click to switch; the interface reloads.", 0.5, 0.5, 0.5)
+            GameTooltip:Show()
+        end)
+        b:HookScript("OnLeave", function() GameTooltip:Hide() end)
+        b:SetScript("OnClick", function()
+            if st.id == Chrome:StyleID() then return end
+            Chrome:SetStyle(st.id)
+            ReloadUI()
+        end)
+    end
+    y = y - 24 * math.ceil(#Chrome.Styles / 5) - 2
     refresh()
     Chrome:OnThemeChanged(refresh)
     return y

@@ -105,37 +105,103 @@ function Chrome:Retint()
 end
 
 -- ============================================================
--- Style: Wick Modern or Wick OG
+-- Styles
 -- ============================================================
 -- The shape the chrome is drawn in, separate from its colours (Theme.lua).
--- Wick OG is the original: flat panels, a 1px border, fel L-brackets.
--- Wick Modern is the look Wick's UI set: rounded glass panels on a soft
--- shadow, no border line and no brackets, the Wick font, rounded buttons
--- and fields with a ring in the accent on hover. Modern is the default.
+-- A style is a description, not code: every drawing call below reads the
+-- current one, so a new look is a new entry here and the whole suite
+-- follows it. Each belongs to one of two families, which is what the
+-- drawing code branches on (Chrome:Modern()):
+--
+--   modern  textured panels: 9-sliced glass on a soft lift, no border
+--           line, a ring that stands in for a coloured border
+--   og      flat panels: a solid fill, a 1px border, corner marks
+--
+-- and then says how it differs from its family's base:
+--
+--   media        textures: panel (rounded), ring, the lift (shadow), the
+--                mask for rounded corners (roundmask, the minimap too) and
+--                the one for icons (iconmask)
+--   slice        the 9-slice margin of panel and ring
+--   glass        how solid panels are, times the family's own alpha
+--   lift         the lift's colour token (nil for black) and alpha
+--   ringRest     a ring shown at rest in the border's place: token, alpha
+--   corners      og: "brackets", "diamonds" or "none"
+--   edge         og: the black pixel outside the border
+--   double       og: a second border line inside the first
+--   font         the Chrome font; uiFont, when set, is also what Wick's
+--                UI's "Wick" font draws in
+--   headingFont  headings and titles
+--   bump         added to font sizes (PT Sans and Arial Narrow run small)
+--   textShadow   a firm drop shadow on text
+--
 -- The choice is account-wide, read from the saved variable directly (as
 -- the theme is), and changing it takes a reload: panels are built once.
 local MEDIA = "Interface\\AddOns\\WickCore\\Media\\"
-Chrome.Media = {
-    rounded   = MEDIA .. "Textures\\rounded.png",
-    ring      = MEDIA .. "Textures\\ring.png",
-    shadow    = MEDIA .. "Textures\\shadow.png",
-    roundmask = MEDIA .. "Textures\\roundmask.png",
-    font      = MEDIA .. "Fonts\\PT_Sans-Narrow-Web-Bold.ttf",
-}
-function Chrome:Glyph(name) return MEDIA .. "Textures\\glyph-" .. name .. ".png" end
+local TEX = MEDIA .. "Textures\\"
+local PT_SANS = MEDIA .. "Fonts\\PT_Sans-Narrow-Web-Bold.ttf"
+local FRIZ = "Fonts\\FRIZQT__.TTF"
+local ARIALN = "Fonts\\ARIALN.TTF"
+local MORPHEUS = "Fonts\\MORPHEUS.TTF"
 
-Chrome.FONT_OG = "Fonts\\FRIZQT__.TTF"
+local BASE_MEDIA = {
+    rounded   = TEX .. "rounded.png",
+    ring      = TEX .. "ring.png",
+    shadow    = TEX .. "shadow.png",
+    roundmask = TEX .. "roundmask.png",
+    iconmask  = TEX .. "roundmask.png",
+    diamond   = TEX .. "diamond.png",
+    font      = PT_SANS,
+    slice     = 8,
+}
+
+local function modernBump(size) return size + (size <= 11 and 2 or 1) end
+
+Chrome.Styles = {
+    { id = "modern", name = "Wick Modern", family = "modern",
+      blurb = "Rounded glass on a soft shadow, the Wick font, no border lines.",
+      font = PT_SANS, bump = modernBump, textShadow = true },
+    { id = "og", name = "Wick OG", family = "og",
+      blurb = "The original: flat panels, a single-pixel border, fel corners.",
+      font = FRIZ, corners = "brackets", edge = true },
+    { id = "slate", name = "Slate", family = "og",
+      blurb = "Flat and dense: hard corners, hairline borders, no ornament, condensed type.",
+      font = ARIALN, uiFont = ARIALN, bump = function(size) return size + 1 end,
+      corners = "none", edge = false, compact = true },
+    { id = "obsidian", name = "Obsidian", family = "modern",
+      blurb = "Deep frosted glass: large rounding, a heavy shadow, circular icons.",
+      font = PT_SANS, bump = modernBump, textShadow = true,
+      media = { rounded = TEX .. "panel-r12.png", ring = TEX .. "ring-r12.png",
+                roundmask = TEX .. "panel-r12.png", iconmask = TEX .. "mask-circle.png", slice = 12 },
+      glass = 0.8, lift = { alpha = 0.85 }, ringRest = { token = "border", alpha = 0.7 } },
+    { id = "runic", name = "Runic", family = "og",
+      blurb = "High fantasy, drawn not borrowed: double borders, diamond corners, carved headings.",
+      font = FRIZ, headingFont = MORPHEUS, headingBump = 3, corners = "diamonds", edge = true, double = true },
+    { id = "hologram", name = "Hologram", family = "modern",
+      blurb = "A sci-fi display: cut corners, faint fills, outlines and a glow in the accent.",
+      font = PT_SANS, bump = modernBump, textShadow = true,
+      media = { rounded = TEX .. "panel-chamfer.png", ring = TEX .. "ring-chamfer.png",
+                roundmask = TEX .. "mask-chamfer.png", iconmask = TEX .. "mask-chamfer.png" },
+      glass = 0.55, lift = { token = "fel", alpha = 0.3 }, ringRest = { token = "fel", alpha = 0.55 } },
+}
+Chrome.StyleByID = {}
+for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
 
 local function styleStore()
     local sv = rawget(_G, "WickCoreDB")
     return type(sv) == "table" and type(sv.global) == "table" and sv.global or nil
 end
 
-function Chrome:Style()
+-- The style in use, its whole description.
+function Chrome:StyleDef()
     local g = styleStore()
-    local s = g and g.style
-    return (s == "og") and "og" or "modern"
+    return self.StyleByID[g and g.style or "modern"] or self.StyleByID.modern
 end
+
+function Chrome:StyleID() return self:StyleDef().id end
+
+-- The family: "modern" or "og". What the drawing code branches on.
+function Chrome:Style() return self:StyleDef().family end
 
 function Chrome:Modern() return self:Style() == "modern" end
 
@@ -143,14 +209,32 @@ function Chrome:SetStyle(style)
     local sv = rawget(_G, "WickCoreDB")
     if type(sv) ~= "table" then return end
     sv.global = sv.global or {}
-    sv.global.style = (style == "og") and "og" or "modern"
+    sv.global.style = self.StyleByID[style] and style or "modern"
     if Core.Store then Core.Store:Dirty() end
 end
 
--- The font every Chrome text uses: the Wick font in the modern style,
--- Friz in the original. Chrome.FONT is kept current for products that
--- read it directly.
-function Chrome:Font() return self:Modern() and self.Media.font or self.FONT_OG end
+-- Media for the style in use: its own textures where it has them, the
+-- base set where it does not. Read at draw time, never cached.
+Chrome.Media = setmetatable({}, { __index = function(_, k)
+    local own = Chrome:StyleDef().media
+    if own and own[k] ~= nil then return own[k] end
+    return BASE_MEDIA[k]
+end })
+
+function Chrome:Glyph(name) return TEX .. "glyph-" .. name .. ".png" end
+
+Chrome.FONT_OG = FRIZ
+
+-- The font every Chrome text uses. Chrome.FONT is kept current for
+-- products that read it directly.
+function Chrome:Font() return self:StyleDef().font or PT_SANS end
+function Chrome:HeadingFont() local st = self:StyleDef(); return st.headingFont or st.font or PT_SANS end
+
+-- How solid a panel of the family's alpha is in this style.
+function Chrome:GlassAlpha(a) return (a or 1) * (self:StyleDef().glass or 1) end
+
+-- The corner marks an og-family panel wears.
+function Chrome:Corners() return self:StyleDef().corners or "none" end
 
 local function slice(tex, m)
     if tex.SetTextureSliceMargins then
@@ -163,9 +247,9 @@ end
 function Chrome:Glass(parent, layer, color, alpha, sub)
     local t = parent:CreateTexture(nil, layer or "BACKGROUND", nil, sub)
     t:SetTexture(self.Media.rounded)
-    slice(t, 8)
+    slice(t, self.Media.slice)
     color = color or C.void
-    local a = alpha or color[4] or 1
+    local a = self:GlassAlpha(alpha or color[4] or 1)
     t:SetVertexColor(color[1], color[2], color[3], a)
     Chrome:Register(t, color, "vertex", a)
     return t
@@ -178,7 +262,10 @@ function Chrome:Lift(f)
     slice(s, 28)
     s:SetPoint("TOPLEFT", f, "TOPLEFT", -12, 10)
     s:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 12, -14)
-    s:SetVertexColor(0, 0, 0, 0.6)
+    local lift = self:StyleDef().lift or {}
+    local c = lift.token and C[lift.token] or { 0, 0, 0 }
+    s:SetVertexColor(c[1], c[2], c[3], lift.alpha or 0.6)
+    if lift.token then Chrome:Register(s, c, "vertex", lift.alpha or 0.6) end
     return s
 end
 
@@ -192,7 +279,7 @@ function Chrome:ModernSlot(b, icon)
     if b.ItemSlotBackground then b.ItemSlotBackground:SetAlpha(0) end
     local bg = b:CreateTexture(nil, "BACKGROUND", nil, -7)
     bg:SetTexture(self.Media.rounded)
-    slice(bg, 8)
+    slice(bg, self.Media.slice)
     bg:SetAllPoints()
     -- The shadow colour, a step off the panel, so an empty slot (the Free
     -- tile) still reads as a tile.
@@ -200,22 +287,29 @@ function Chrome:ModernSlot(b, icon)
     Chrome:Register(bg, C.shadow, "vertex", 0.95)
     if icon and icon.AddMaskTexture and b.CreateMaskTexture then
         local m = b:CreateMaskTexture()
-        m:SetTexture(self.Media.roundmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        m:SetTexture(self.Media.iconmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
         m:SetAllPoints(icon)
         icon:AddMaskTexture(m)
     end
     local ring = b:CreateTexture(nil, "OVERLAY", nil, 1)
     ring:SetTexture(self.Media.ring)
-    slice(ring, 8)
+    slice(ring, self.Media.slice)
     ring:SetAllPoints()
     ring:Hide()
     local rest = C.border
+    local ringRest = self:StyleDef().ringRest
     return function(c)
         -- The resting colour (the theme's border, or the brand purple a
         -- product passes for "no quality") puts the ring away.
         local function is(x) return math.abs(c[1] - x[1]) < 0.03 and math.abs(c[2] - x[2]) < 0.03 and math.abs(c[3] - x[3]) < 0.03 end
         if not c or is(rest) or is({ 0.20, 0.18, 0.34 }) then
-            ring:Hide()
+            if ringRest then
+                local rc = C[ringRest.token] or C.border
+                ring:SetVertexColor(rc[1], rc[2], rc[3], ringRest.alpha)
+                ring:Show()
+            else
+                ring:Hide()
+            end
         else
             ring:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
             ring:Show()
@@ -227,7 +321,7 @@ end
 function Chrome:Ring(parent, color, layer)
     local r = parent:CreateTexture(nil, layer or "BORDER", nil, 2)
     r:SetTexture(self.Media.ring)
-    slice(r, 8)
+    slice(r, self.Media.slice)
     r:SetAllPoints()
     color = color or C.fel
     r:SetVertexColor(color[1], color[2], color[3], 1)
@@ -255,21 +349,21 @@ end
 -- Friz, so the modern style sets it a size or two up, with a firm shadow,
 -- to read as clearly as Wick's UI. Products that make their own font
 -- strings call this too.
-function Chrome:SetFont(fs, size, flags)
+function Chrome:SetFont(fs, size, flags, heading)
     size = size or 12
-    if self:Modern() then
-        size = size + (size <= 11 and 2 or 1)
-        fs:SetFont(self:Font(), size, flags or "")
+    local st = self:StyleDef()
+    if st.bump then size = st.bump(size) end
+    if heading and st.headingBump then size = size + st.headingBump end
+    fs:SetFont(heading and self:HeadingFont() or self:Font(), size, flags or "")
+    if st.textShadow then
         fs:SetShadowOffset(1, -1)
         fs:SetShadowColor(0, 0, 0, 1)
-    else
-        fs:SetFont(self:Font(), size, flags or "")
     end
 end
 
-function Chrome:Text(parent, size, color, flags)
+function Chrome:Text(parent, size, color, flags, heading)
     local fs = parent:CreateFontString(nil, "OVERLAY")
-    self:SetFont(fs, size or 12, flags)
+    self:SetFont(fs, size or 12, flags, heading)
     color = color or C.text
     fs:SetTextColor(color[1], color[2], color[3], color[4] or 1)
     Chrome:Register(fs, color, "text")
@@ -299,8 +393,10 @@ local function roundify(f)
                 local c = C[info.token]
                 local a = info.alpha or (c and c[4]) or 1
                 r:SetTexture(Chrome.Media.rounded)
+                a = Chrome:GlassAlpha(a)
                 if r.SetTextureSliceMargins then
-                    r:SetTextureSliceMargins(8, 8, 8, 8)
+                    local m = Chrome.Media.slice
+                    r:SetTextureSliceMargins(m, m, m, m)
                     if r.SetTextureSliceMode then pcall(r.SetTextureSliceMode, r, 0) end
                 end
                 if c then r:SetVertexColor(c[1], c[2], c[3], a) end
@@ -313,9 +409,16 @@ end
 
 local function ringProxy(ring, restColor)
     local proxy = {}
+    local ringRest = Chrome:StyleDef().ringRest
     local function paint(_, r, g, b, a)
         if near(r, restColor[1]) and near(g, restColor[2]) and near(b, restColor[3]) then
-            ring:Hide()
+            if ringRest then
+                local rc = C[ringRest.token] or C.border
+                ring:SetVertexColor(rc[1], rc[2], rc[3], ringRest.alpha)
+                ring:Show()
+            else
+                ring:Hide()
+            end
         else
             ring:SetVertexColor(r, g, b, a or 1)
             ring:Show()
@@ -334,7 +437,8 @@ function Chrome:AddBorder(f, color)
         if not f.lift and w and h and w >= 150 and h >= 100 then f.lift = self:Lift(f) end
         local ring = f:CreateTexture(nil, "BORDER", nil, 2)
         ring:SetTexture(self.Media.ring)
-        if ring.SetTextureSliceMargins then ring:SetTextureSliceMargins(8, 8, 8, 8) end
+        local m = self.Media.slice
+        if ring.SetTextureSliceMargins then ring:SetTextureSliceMargins(m, m, m, m) end
         ring:SetAllPoints()
         ring:Hide()
         f.ring = f.ring or ring
@@ -342,9 +446,9 @@ function Chrome:AddBorder(f, color)
         -- signal (a bank section, a highlighted row): the ring shows it.
         local rest = C.border
         local proxy = ringProxy(ring, rest)
-        if not (near(color[1], rest[1]) and near(color[2], rest[2]) and near(color[3], rest[3])) then
-            proxy:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
-        end
+        -- Painted once now: a signal colour lights the ring, the resting
+        -- one shows the style's ring at rest (or nothing).
+        proxy:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
         f.border = { top = proxy, bottom = proxy, left = proxy, right = proxy }
         return
     end
@@ -353,6 +457,21 @@ function Chrome:AddBorder(f, color)
     local left   = self:Texture(f, "BORDER", color); left:SetPoint("TOPLEFT");   left:SetPoint("BOTTOMLEFT"); left:SetWidth(1)
     local right  = self:Texture(f, "BORDER", color); right:SetPoint("TOPRIGHT"); right:SetPoint("BOTTOMRIGHT"); right:SetWidth(1)
     f.border = { top = top, bottom = bot, left = left, right = right }
+    local w, h = f:GetSize()
+    if self:StyleDef().double and w and h and w >= 40 and h >= 30 then
+        -- The inner line of a double border, fainter, 2px in.
+        local inner = {}
+        for _, side in ipairs({ "top", "bottom", "left", "right" }) do
+            local t = self:Texture(f, "BORDER", C.border)
+            t:SetAlpha(0.55)
+            inner[side] = t
+        end
+        inner.top:SetPoint("TOPLEFT", 3, -3); inner.top:SetPoint("TOPRIGHT", -3, -3); inner.top:SetHeight(1)
+        inner.bottom:SetPoint("BOTTOMLEFT", 3, 3); inner.bottom:SetPoint("BOTTOMRIGHT", -3, 3); inner.bottom:SetHeight(1)
+        inner.left:SetPoint("TOPLEFT", 3, -3); inner.left:SetPoint("BOTTOMLEFT", 3, 3); inner.left:SetWidth(1)
+        inner.right:SetPoint("TOPRIGHT", -3, -3); inner.right:SetPoint("BOTTOMRIGHT", -3, 3); inner.right:SetWidth(1)
+        f.innerBorder = inner
+    end
 end
 
 -- Fel-green L-brackets. If a resizeButton is passed the BOTTOMRIGHT bracket
@@ -364,6 +483,23 @@ function Chrome:AddBrackets(parent, resizeButton, color)
     -- No brackets in the modern style: the table is kept for products that
     -- walk it, and stays empty.
     if self:Modern() and not parent.wickPanel then return end
+    local corners = self:Modern() and "brackets" or self:Corners()
+    if corners == "none" then return end
+    if corners == "diamonds" then
+        for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
+            local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
+            local d = host:CreateTexture(nil, "OVERLAY", nil, 3)
+            d:SetTexture(self.Media.diamond)
+            d:SetSize(9, 9)
+            local x = point:find("LEFT") and -1 or 1
+            local y = point:find("TOP") and 1 or -1
+            d:SetPoint("CENTER", host, point, x * 0.5, y * 0.5)
+            d:SetVertexColor(color[1], color[2], color[3], 1)
+            Chrome:Register(d, color, "vertex", 1)
+            parent.brackets[point] = { d }
+        end
+        return
+    end
     for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
         local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
         local h = self:Texture(host, "OVERLAY", color)
@@ -474,7 +610,7 @@ function Chrome:NewPanel(name, o)
     if modern then header:Hide(); sep:SetAlpha(0.5) end
     f.header = header
 
-    f.title = self:Text(f, 12)
+    f.title = self:Text(f, 12, nil, nil, true)
     f.title:SetPoint("LEFT", f, "TOPLEFT", 10, -H / 2)
     f.title:SetText(self:TitleMarkup(o.title or name))
 
@@ -708,7 +844,7 @@ function Chrome:Stepper(parent, label, get, set, opts)
 end
 
 function Chrome:Heading(parent, text)
-    local fs = self:Text(parent, 12, C.fel)
+    local fs = self:Text(parent, 12, C.fel, nil, true)
     fs:SetText(text)
     return fs
 end
