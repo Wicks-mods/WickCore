@@ -240,10 +240,19 @@ local function makeScroller(parent)
     body:SetSize(1, 1)
     scroll:SetScrollChild(body)
 
-    local track = Chrome:Texture(parent, "ARTWORK", Chrome.Colors.border)
-    track:SetWidth(2)
-    local thumb = Chrome:Texture(parent, "OVERLAY", Chrome.Colors.fel)
-    thumb:SetWidth(2)
+    -- The suite's scroll bar: a 4 px track in the border colour, a 4 px
+    -- thumb in the accent, rounded in the modern style (as Wick's UI draws
+    -- every scroll bar).
+    local track, thumb
+    if Chrome.Modern and Chrome:Modern() then
+        track = Chrome:Glass(parent, "ARTWORK", Chrome.Colors.border, 0.6)
+        thumb = Chrome:Glass(parent, "OVERLAY", Chrome.Colors.fel, 0.8)
+    else
+        track = Chrome:Texture(parent, "ARTWORK", Chrome.Colors.border)
+        thumb = Chrome:Texture(parent, "OVERLAY", Chrome.Colors.fel)
+    end
+    track:SetWidth(4)
+    thumb:SetWidth(4)
     track:Hide()
     thumb:Hide()
 
