@@ -142,6 +142,9 @@ end
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
 --   stripe       an accent stripe down the left edge of panels
 --   palette      the theme the look comes with, chosen with it
+--   edgeInset    how far in from a panel's edge it reads as solid (a wash
+--                that fades out at its sides): things set against the
+--                edge, like a window's side tabs, move in by this much
 --   iconTab      icons start this far below their tile's top, so the
 --                tile's shaped top shows above them as a tab (Arena's
 --                folders: its 6 px notch and 1 px under it)
@@ -222,7 +225,7 @@ Chrome.Styles = {
       textShadow = true,
       media = { rounded = TEX .. "panel-wash.png", ring = TEX .. "ring-rules.png",
                 iconmask = TEX .. "mask-circle.png", slice = 16 },
-      glass = 0.9, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.5 } },
+      glass = 0.9, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.5 }, edgeInset = 12 },
     { id = "arena", name = "Arena", family = "modern", palette = "arena",
       blurb = "Esports flat: hard panels with one notched corner, an edge stripe, bold condensed capitals.",
       font = F.barlow, headingFont = F.barlowBold, uiFont = F.barlow, bump = up(2), uiBump = 2,
