@@ -221,8 +221,77 @@ function Chrome:Text(parent, size, color, flags)
 end
 
 -- Four 1px muted-purple edges.
+--
+-- In the modern style a border is not drawn. The frame's flat background
+-- (a full-size texture Chrome painted with a palette colour) becomes rounded
+-- glass, a panel-sized frame gets the soft lift, and the four edges become
+-- stand-ins for one rounded ring: a product that recolours its border for
+-- hover or selection (for _, t in pairs(f.border) do t:SetColorTexture(...))
+-- lights the ring in that colour, and setting it back to the border colour
+-- puts the ring away. So every product built on these primitives takes the
+-- modern look without changing a line.
+local function near(a, b) return math.abs(a - b) < 0.02 end
+
+local function roundify(f)
+    local fw, fh = f:GetSize()
+    for _, r in ipairs({ f:GetRegions() }) do
+        local info = r.GetObjectType and r:GetObjectType() == "Texture" and tinted[r]
+        if info and info.kind == "texture" and r:GetDrawLayer() == "BACKGROUND" then
+            local w, h = r:GetSize()
+            local full = (r:GetNumPoints() >= 2) or (fw and w and fh and h and w >= fw - 2 and h >= fh - 2)
+            if full then
+                local c = C[info.token]
+                local a = info.alpha or (c and c[4]) or 1
+                r:SetTexture(Chrome.Media.rounded)
+                if r.SetTextureSliceMargins then
+                    r:SetTextureSliceMargins(8, 8, 8, 8)
+                    if r.SetTextureSliceMode then pcall(r.SetTextureSliceMode, r, 0) end
+                end
+                if c then r:SetVertexColor(c[1], c[2], c[3], a) end
+                info.kind = "vertex"
+                info.alpha = a
+            end
+        end
+    end
+end
+
+local function ringProxy(ring, restColor)
+    local proxy = {}
+    local function paint(_, r, g, b, a)
+        if near(r, restColor[1]) and near(g, restColor[2]) and near(b, restColor[3]) then
+            ring:Hide()
+        else
+            ring:SetVertexColor(r, g, b, a or 1)
+            ring:Show()
+        end
+    end
+    proxy.SetColorTexture = paint
+    proxy.SetVertexColor = paint
+    return setmetatable(proxy, { __index = function() return function() end end })
+end
+
 function Chrome:AddBorder(f, color)
     color = color or C.border
+    if self:Modern() then
+        roundify(f)
+        local w, h = f:GetSize()
+        if not f.lift and w and h and w >= 150 and h >= 100 then f.lift = self:Lift(f) end
+        local ring = f:CreateTexture(nil, "BORDER", nil, 2)
+        ring:SetTexture(self.Media.ring)
+        if ring.SetTextureSliceMargins then ring:SetTextureSliceMargins(8, 8, 8, 8) end
+        ring:SetAllPoints()
+        ring:Hide()
+        f.ring = f.ring or ring
+        -- A border asked for in a colour other than the resting one is a
+        -- signal (a bank section, a highlighted row): the ring shows it.
+        local rest = C.border
+        local proxy = ringProxy(ring, rest)
+        if not (near(color[1], rest[1]) and near(color[2], rest[2]) and near(color[3], rest[3])) then
+            proxy:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
+        end
+        f.border = { top = proxy, bottom = proxy, left = proxy, right = proxy }
+        return
+    end
     local top    = self:Texture(f, "BORDER", color); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT");    top:SetHeight(1)
     local bot    = self:Texture(f, "BORDER", color); bot:SetPoint("BOTTOMLEFT"); bot:SetPoint("BOTTOMRIGHT"); bot:SetHeight(1)
     local left   = self:Texture(f, "BORDER", color); left:SetPoint("TOPLEFT");   left:SetPoint("BOTTOMLEFT"); left:SetWidth(1)
@@ -236,6 +305,9 @@ function Chrome:AddBrackets(parent, resizeButton, color)
     color = color or C.fel
     local B = self.BRACKET
     parent.brackets = {}
+    -- No brackets in the modern style: the table is kept for products that
+    -- walk it, and stays empty.
+    if self:Modern() and not parent.wickPanel then return end
     for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
         local host = (point == "BOTTOMRIGHT" and resizeButton) or parent
         local h = self:Texture(host, "OVERLAY", color)
@@ -316,15 +388,14 @@ function Chrome:NewPanel(name, o)
     f:Hide()
 
     local modern = self:Modern()
+    f.wickPanel = true
     local bg
     if modern then
-        -- Rounded glass on a soft lift; the border exists (products may
-        -- recolour it) but draws nothing.
+        -- Rounded glass on a soft lift; the border is the ring stand-in.
         bg = self:Glass(f, "BACKGROUND", C.void, 0.95, -7)
         bg:SetAllPoints()
         f.lift = self:Lift(f)
         self:AddBorder(f)
-        for _, t in pairs(f.border) do t:Hide() end
     else
         bg = self:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints()
         self:AddBorder(f)
@@ -478,7 +549,6 @@ function Chrome:Button(parent, text, width, height)
         -- A rounded tile; on hover the accent ring.
         local bg = self:Glass(b, "BACKGROUND", C.shadow, 0.92); bg:SetAllPoints()
         self:AddBorder(b)
-        for _, t in pairs(b.border) do t:Hide() end
         b.ring = self:Ring(b)
         b.label = self:Text(b, 11)
         b.label:SetPoint("CENTER")
@@ -512,7 +582,6 @@ function Chrome:Check(parent, label, get, set)
     if self:Modern() then
         local bbg = self:Glass(box, "BACKGROUND", C.shadow, 0.92); bbg:SetAllPoints()
         self:AddBorder(box)
-        for _, t in pairs(box.border) do t:Hide() end
         fill = self:Glass(box, "ARTWORK", C.fel, 1)
     else
         local bbg = self:Texture(box, "BACKGROUND", C.void); bbg:SetAllPoints()
