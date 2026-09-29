@@ -140,10 +140,15 @@ end
 --   dash         a short line in the accent before each heading
 --   borderPx     og: border thickness
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
---   stripe       an accent stripe down the left edge of panels
+--   stripe       true: a stripe in the text colour down the left edge of
+--                panels; or { token, share, sides }: a short bar in that
+--                colour, share of the height, centred on the left edge
+--                (and the right with sides)
+--   rivets       a rivet in each corner of big panels
 --   palette      the theme the look comes with, chosen with it
---   sheen        a gradient laid over panels (not tiles): the accent at
---                { top } alpha along the top, black at { bottom } alpha
+--   sheen        a gradient laid over panels (not tiles): the accent (or
+--                { token }) at { top } alpha along the top, black at
+--                { bottom } alpha
 --                along the bottom, so a window is lit from above
 --   edgeInset    how far in from a panel's edge it reads as solid (a wash
 --                that fades out at its sides): things set against the
@@ -172,6 +177,7 @@ local BASE_MEDIA = {
     shadow    = TEX .. "shadow.png",
     roundmask = TEX .. "roundmask.png",
     iconmask  = TEX .. "roundmask.png",
+    rivet     = TEX .. "rivet.png",
     font      = PT_SANS,
     slice     = 8,
 }
@@ -241,6 +247,17 @@ Chrome.Styles = {
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 8 },
       glass = 1.25, lift = { alpha = 0.7 }, ringRest = { token = "text", alpha = 0.16 },
       statusbar = TEX .. "bar-edge.png" },
+    { id = "foundry", name = "Foundry", family = "modern", palette = "foundry",
+      blurb = "Industrial: chamfered steel frames, rivets, orange hazard marks, angular capitals.",
+      font = F.exo, headingFont = F.tekturBold, uiFont = F.exo, bump = up(1), uiBump = 1,
+      textShadow = true, upper = true,
+      media = { rounded = TEX .. "panel-chamfer6.png", ring = TEX .. "ring-steel.png",
+                tile = TEX .. "panel-square.png", tileRing = TEX .. "ring-hair.png",
+                roundmask = TEX .. "mask-chamfer.png", iconmask = TEX .. "mask-square.png", slice = 8 },
+      glass = 1.25, lift = { alpha = 0.6 }, ringRest = { token = "border", alpha = 1 },
+      rivets = true, stripe = { token = "fel", share = 0.3, sides = true },
+      sheen = { top = 0.1, bottom = 0.4, token = "text" },
+      health = { friend = "C8352B", enemy = "fel" }, statusbar = TEX .. "bar-steel.png" },
     { id = "frost", name = "Frost", family = "modern", palette = "frost",
       blurb = "Cold and sparse: see-through panels, hairlines in the icy accent, stark wide capitals over a narrow face.",
       font = F.saira, headingFont = F.michroma, uiFont = F.saira, bump = up(1), headingBump = -2, uiBump = 1,
@@ -982,7 +999,7 @@ local sheens = setmetatable({}, { __mode = "k" })
 local function paintSheen(t)
     local sh = Chrome:StyleDef().sheen
     if not (sh and t.SetGradient and CreateColor) then return end
-    local c = C.fel
+    local c = C[sh.token or "fel"] or C.fel
     pcall(t.SetGradient, t, "VERTICAL", CreateColor(0, 0, 0, sh.bottom or 0.3), CreateColor(c[1], c[2], c[3], sh.top or 0.15))
 end
 local sheenHooked = false
@@ -1003,6 +1020,62 @@ function Chrome:Sheen(f)
     return t
 end
 
+-- A look's edge marks on a big panel: a stripe down the left (Arena), or
+-- short bars centred on the sides (Foundry's hazard marks).
+function Chrome:Stripes(f)
+    local sp = self:StyleDef().stripe
+    if not sp or not f or f.wickStripe then return end
+    if sp == true then
+        local s = f:CreateTexture(nil, "BORDER", nil, 3)
+        s:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -1)
+        s:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 1)
+        s:SetWidth(3)
+        s:SetColorTexture(C.text[1], C.text[2], C.text[3], 1)
+        Chrome:Register(s, C.text, "texture")
+        f.wickStripe = { s }
+        return
+    end
+    local c = C[sp.token or "fel"] or C.fel
+    local out = {}
+    for _, side in ipairs(sp.sides and { "LEFT", "RIGHT" } or { "LEFT" }) do
+        local s = f:CreateTexture(nil, "BORDER", nil, 3)
+        s:SetPoint(side, f, side, 0, 0)
+        s:SetWidth(sp.width or 3)
+        local h = f:GetHeight()
+        s:SetHeight(math.max(12, (h and h > 0 and h or 120) * (sp.share or 0.3)))
+        s:SetColorTexture(c[1], c[2], c[3], 1)
+        Chrome:Register(s, c, "texture")
+        out[#out + 1] = s
+    end
+    f.wickStripe = out
+    -- The bars keep their share of the panel as it is sized.
+    if f.HookScript then
+        f:HookScript("OnSizeChanged", function(self, _, h)
+            for _, s in ipairs(self.wickStripe or {}) do
+                s:SetHeight(math.max(12, (h or 120) * (sp.share or 0.3)))
+            end
+        end)
+    end
+end
+
+-- A rivet in each corner of a big panel (Foundry), a few pixels in.
+function Chrome:Rivets(f)
+    if not self:StyleDef().rivets or not f or f.wickRivets or self:IsTile(f) then return end
+    local out = {}
+    for _, point in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
+        local r = f:CreateTexture(nil, "BORDER", nil, 4)
+        r:SetTexture(self.Media.rivet)
+        r:SetSize(8, 8)
+        local x = point:find("LEFT") and 3 or -3
+        local y = point:find("TOP") and -3 or 3
+        r:SetPoint(point, f, point, x, y)
+        r:SetVertexColor(C.text[1], C.text[2], C.text[3], 0.55)
+        Chrome:Register(r, C.text, "vertex", 0.55)
+        out[#out + 1] = r
+    end
+    f.wickRivets = out
+end
+
 -- What a look adds to a big panel: a solid offset shadow (Rebel) and an
 -- accent stripe down its left edge (Arena).
 function Chrome:PanelExtras(f)
@@ -1016,15 +1089,8 @@ function Chrome:PanelExtras(f)
         sh:SetColorTexture(0, 0, 0, h.alpha or 1)
         f.wickHardShadow = sh
     end
-    if st.stripe and not f.wickStripe then
-        local s = f:CreateTexture(nil, "BORDER", nil, 3)
-        s:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -1)
-        s:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 1)
-        s:SetWidth(3)
-        s:SetColorTexture(C.text[1], C.text[2], C.text[3], 1)
-        Chrome:Register(s, C.text, "texture")
-        f.wickStripe = s
-    end
+    self:Stripes(f)
+    self:Rivets(f)
 end
 
 -- A 1px rule. In the modern style it is the accent at half strength, the
