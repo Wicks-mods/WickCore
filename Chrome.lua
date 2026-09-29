@@ -182,6 +182,45 @@ function Chrome:Lift(f)
     return s
 end
 
+-- An item button in the modern style, drawn like the action buttons: the
+-- icon trimmed to the rounded shape on a glass tile, and the quality shown
+-- as a rounded ring in its colour. Returns the function that sets that
+-- ring (colour table in, the resting border colour puts it away), or nil
+-- in the original style, when the product keeps its own square edges.
+function Chrome:ModernSlot(b, icon)
+    if not self:Modern() or not b then return nil end
+    if b.ItemSlotBackground then b.ItemSlotBackground:SetAlpha(0) end
+    local bg = b:CreateTexture(nil, "BACKGROUND", nil, -7)
+    bg:SetTexture(self.Media.rounded)
+    slice(bg, 8)
+    bg:SetAllPoints()
+    bg:SetVertexColor(C.void[1], C.void[2], C.void[3], 0.9)
+    Chrome:Register(bg, C.void, "vertex", 0.9)
+    if icon and icon.AddMaskTexture and b.CreateMaskTexture then
+        local m = b:CreateMaskTexture()
+        m:SetTexture(self.Media.roundmask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        m:SetAllPoints(icon)
+        icon:AddMaskTexture(m)
+    end
+    local ring = b:CreateTexture(nil, "OVERLAY", nil, 1)
+    ring:SetTexture(self.Media.ring)
+    slice(ring, 8)
+    ring:SetAllPoints()
+    ring:Hide()
+    local rest = C.border
+    return function(c)
+        -- The resting colour (the theme's border, or the brand purple a
+        -- product passes for "no quality") puts the ring away.
+        local function is(x) return math.abs(c[1] - x[1]) < 0.03 and math.abs(c[2] - x[2]) < 0.03 and math.abs(c[3] - x[3]) < 0.03 end
+        if not c or is(rest) or is({ 0.20, 0.18, 0.34 }) then
+            ring:Hide()
+        else
+            ring:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
+            ring:Show()
+        end
+    end
+end
+
 -- The rounded ring a modern control shows for hover or selection.
 function Chrome:Ring(parent, color, layer)
     local r = parent:CreateTexture(nil, layer or "BORDER", nil, 2)
@@ -210,10 +249,25 @@ function Chrome:Texture(parent, layer, color)
     return t
 end
 
+-- A font string in the style's font. PT Sans Narrow runs small next to
+-- Friz, so the modern style sets it a size or two up, with a firm shadow,
+-- to read as clearly as Wick's UI. Products that make their own font
+-- strings call this too.
+function Chrome:SetFont(fs, size, flags)
+    size = size or 12
+    if self:Modern() then
+        size = size + (size <= 11 and 2 or 1)
+        fs:SetFont(self:Font(), size, flags or "")
+        fs:SetShadowOffset(1, -1)
+        fs:SetShadowColor(0, 0, 0, 1)
+    else
+        fs:SetFont(self:Font(), size, flags or "")
+    end
+end
+
 function Chrome:Text(parent, size, color, flags)
     local fs = parent:CreateFontString(nil, "OVERLAY")
-    fs:SetFont(self:Font(), size or 12, flags or "")
-    if self:Modern() then fs:SetShadowOffset(1, -1); fs:SetShadowColor(0, 0, 0, 0.8) end
+    self:SetFont(fs, size or 12, flags)
     color = color or C.text
     fs:SetTextColor(color[1], color[2], color[3], color[4] or 1)
     Chrome:Register(fs, color, "text")
