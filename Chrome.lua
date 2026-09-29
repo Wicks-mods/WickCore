@@ -142,6 +142,9 @@ end
 --   hardShadow   og: a solid offset shadow under panels { x, y, alpha }
 --   stripe       an accent stripe down the left edge of panels
 --   palette      the theme the look comes with, chosen with it
+--   sheen        a gradient laid over panels (not tiles): the accent at
+--                { top } alpha along the top, black at { bottom } alpha
+--                along the bottom, so a window is lit from above
 --   edgeInset    how far in from a panel's edge it reads as solid (a wash
 --                that fades out at its sides): things set against the
 --                edge, like a window's side tabs, move in by this much
@@ -245,7 +248,8 @@ Chrome.Styles = {
       media = { rounded = TEX .. "panel-square.png", ring = TEX .. "ring-hair.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
       glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
-      health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true },
+      health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true,
+      sheen = { top = 0.16, bottom = 0.35 } },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
@@ -971,10 +975,39 @@ function Chrome:SetHeadingText(fs, text)
     end
 end
 
+-- A look's sheen over a panel (Frost): lit in the accent at the top, darker
+-- at the bottom, drawn just above the panel's own fill. Small frames
+-- (slots, buttons) are left plain. Repainted when the theme changes.
+local sheens = setmetatable({}, { __mode = "k" })
+local function paintSheen(t)
+    local sh = Chrome:StyleDef().sheen
+    if not (sh and t.SetGradient and CreateColor) then return end
+    local c = C.fel
+    pcall(t.SetGradient, t, "VERTICAL", CreateColor(0, 0, 0, sh.bottom or 0.3), CreateColor(c[1], c[2], c[3], sh.top or 0.15))
+end
+local sheenHooked = false
+function Chrome:Sheen(f)
+    local sh = self:StyleDef().sheen
+    if not sh or not f or f.wickSheen or self:IsTile(f) then return end
+    -- Theme.lua loads after this file; the repaint is hooked on first use.
+    if not sheenHooked and self.OnThemeChanged then
+        sheenHooked = true
+        self:OnThemeChanged(function() for t in pairs(sheens) do paintSheen(t) end end)
+    end
+    local t = f:CreateTexture(nil, "BACKGROUND", nil, -6)
+    t:SetAllPoints()
+    t:SetColorTexture(1, 1, 1, 1)
+    paintSheen(t)
+    sheens[t] = true
+    f.wickSheen = t
+    return t
+end
+
 -- What a look adds to a big panel: a solid offset shadow (Rebel) and an
 -- accent stripe down its left edge (Arena).
 function Chrome:PanelExtras(f)
     local st = self:StyleDef()
+    self:Sheen(f)
     if st.hardShadow and not f.wickHardShadow then
         local h = st.hardShadow
         local sh = f:CreateTexture(nil, "BACKGROUND", nil, -8)
