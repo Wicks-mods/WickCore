@@ -175,9 +175,17 @@ local F = {
     cormorantSC  = FONTS .. "CormorantSC-SemiBold.ttf",
     barlow       = FONTS .. "BarlowCondensed-SemiBold.ttf",
     barlowBold   = FONTS .. "BarlowCondensed-Bold.ttf",
-    jost         = FONTS .. "Jost-Medium.ttf",
-    jostLight    = FONTS .. "Jost-Regular.ttf",
+    michroma     = FONTS .. "Michroma-Regular.ttf",
+    saira        = FONTS .. "SairaSemiCondensed-Medium.ttf",
+    sairaBold    = FONTS .. "SairaSemiCondensed-SemiBold.ttf",
+    -- Bundled for what comes next; any Wick's UI font list offers them.
+    tektur       = FONTS .. "Tektur-Medium.ttf",
+    tekturBold   = FONTS .. "Tektur-SemiBold.ttf",
+    italiana     = FONTS .. "Italiana-Regular.ttf",
+    exo          = FONTS .. "Exo2-Medium.ttf",
+    exoBold      = FONTS .. "Exo2-SemiBold.ttf",
 }
+Chrome.Fonts = F
 local function up(n) return function(size) return size + n end end
 
 Chrome.Styles = {
@@ -215,12 +223,12 @@ Chrome.Styles = {
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
       glass = 1.25, lift = { alpha = 0.45 } },
     { id = "frost", name = "Frost", family = "modern", palette = "frost",
-      blurb = "Cold and sparse: see-through panels, hairline borders, light spaced type.",
-      font = F.jost, headingFont = F.jostLight, uiFont = F.jost, bump = up(1), uiBump = 1,
+      blurb = "Cold and sparse: see-through panels, hairlines in the icy accent, stark wide capitals over a narrow face.",
+      font = F.saira, headingFont = F.michroma, uiFont = F.saira, bump = up(1), headingBump = -2, uiBump = 1,
       textShadow = true, upper = true,
       media = { rounded = TEX .. "panel-square.png", ring = TEX .. "ring-hair.png",
                 roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 4 },
-      glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "border", alpha = 0.9 } },
+      glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 } },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
