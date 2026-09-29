@@ -52,7 +52,10 @@ local function ensureRoot()
             end
         end
         y = y - 12
-        local ty = Options:ThemeSection(f, 16, y)
+        -- The swatches wrap to the page: it is built on first show, when
+        -- the settings window has given it its width.
+        local w = f:GetWidth()
+        local ty = Options:ThemeSection(f, 16, y, { width = math.max(300, ((w and w > 0) and w or 640) - 32) })
         if rawget(_G, "WicksUI") or (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("WicksUI")) then
             local shared = Chrome:Text(f, 10, Chrome.Colors.muted)
             shared:SetPoint("TOPLEFT", 16, ty - 4)
