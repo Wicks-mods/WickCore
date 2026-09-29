@@ -246,6 +246,7 @@ function Options:ThemeSection(parent, x, y, opts)
     styleHead:SetText("Style:")
     local current = Chrome:StyleID()
     for i, st in ipairs(Chrome.Styles) do
+        -- Choosing a style reloads; the current one does nothing.
         local b = Chrome:Button(parent, st.name, 76, 20)
         local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
         b:SetPoint("TOPLEFT", x + 44 + col * 80, y - row * 24)
@@ -261,7 +262,7 @@ function Options:ThemeSection(parent, x, y, opts)
         b:SetScript("OnClick", function()
             if st.id == Chrome:StyleID() then return end
             Chrome:SetStyle(st.id)
-            ReloadUI()
+            Chrome:Reload()
         end)
     end
     y = y - 24 * math.ceil(#Chrome.Styles / 5) - 2

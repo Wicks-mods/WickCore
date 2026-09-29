@@ -852,6 +852,33 @@ end
 -- Small widgets in the same voice
 -- ============================================================
 
+-- Reload the interface. This client refuses an addon's reload in combat,
+-- so in a fight it waits for the fight to end, and says so. (A secure
+-- /reload button would work in combat, but a window holding one becomes
+-- protected itself and could then not be closed or moved mid-fight.)
+local pendingReload
+function Chrome:Reload()
+    if not InCombatLockdown() then
+        ReloadUI()
+        return
+    end
+    print("|cff4FC778Wick's Mods|r: the interface reloads as soon as this fight is over.")
+    if pendingReload then return end
+    pendingReload = CreateFrame("Frame")
+    pendingReload:RegisterEvent("PLAYER_REGEN_ENABLED")
+    pendingReload:SetScript("OnEvent", function() ReloadUI() end)
+end
+
+-- A button that does before() and then reloads.
+function Chrome:ReloadButton(parent, text, width, height, before)
+    local b = self:Button(parent, text, width, height)
+    b:SetScript("OnClick", function()
+        if before then Core.safe(before) end
+        Chrome:Reload()
+    end)
+    return b
+end
+
 function Chrome:Button(parent, text, width, height)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(width or 90, height or 22)
