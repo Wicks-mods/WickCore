@@ -869,9 +869,10 @@ function Chrome:Reload()
     if not InCombatLockdown() then
         ReloadUI()
         -- If the client refused, the interface is still here half a second
-        -- later and says what to do; after a real reload nothing runs.
+        -- later, and the reload prompt (a reload the game counts as the
+        -- player's own) takes over; after a real reload nothing runs.
         C_Timer.After(0.5, function()
-            print("|cff4FC778Wick's Mods|r: the game did not let the addon reload the interface here. Type |cffD4C8A1/reload|r to finish; what you chose is already saved.")
+            Chrome:ReloadPrompt("The game would not let the addon reload here. Press Reload now to finish; what you chose is already saved.")
         end)
         return
     end
@@ -880,6 +881,53 @@ function Chrome:Reload()
     pendingReload = CreateFrame("Frame")
     pendingReload:RegisterEvent("PLAYER_REGEN_ENABLED")
     pendingReload:SetScript("OnEvent", function() ReloadUI() end)
+end
+
+-- A small window whose Reload now button is a secure /reload: the game
+-- counts it as the player's own, as if typed, so it is never refused. It
+-- is the only window holding a secure button, so the only one that turns
+-- protected: it opens out of combat only (waiting for the fight to end
+-- otherwise) and closes itself the moment a fight starts, before the
+-- lockdown would freeze it.
+local prompt
+local function buildPrompt()
+    local f = Chrome:NewPanel("WickCoreReloadPrompt", { title = "Wick's Mods", width = 360, height = 140, strata = "DIALOG" })
+    local body = f.content or f
+    f.msg = Chrome:Text(body, 12)
+    f.msg:SetPoint("TOPLEFT", 12, -8)
+    f.msg:SetPoint("TOPRIGHT", -12, -8)
+    f.msg:SetJustifyH("LEFT")
+    if f.msg.SetWordWrap then f.msg:SetWordWrap(true) end
+    local go = Chrome:Button(body, "Reload now", 120, 22, "SecureActionButtonTemplate")
+    go:SetPoint("BOTTOMRIGHT", body, "BOTTOM", -4, 10)
+    go:SetAttribute("type", "macro")
+    go:SetAttribute("macrotext", "/reload")
+    go:RegisterForClicks("AnyUp", "AnyDown")
+    f.go = go
+    local later = Chrome:Button(body, "Later", 120, 22)
+    later:SetPoint("BOTTOMLEFT", body, "BOTTOM", 4, 10)
+    later:SetScript("OnClick", function() f:Hide() end)
+    f:RegisterEvent("PLAYER_REGEN_DISABLED")
+    f:SetScript("OnEvent", function(self) if self:IsShown() then self:Hide() end end)
+    return f
+end
+
+local waiting
+function Chrome:ReloadPrompt(text)
+    if InCombatLockdown() then
+        waiting = text
+        if not self.promptWait then
+            self.promptWait = CreateFrame("Frame")
+            self.promptWait:RegisterEvent("PLAYER_REGEN_ENABLED")
+            self.promptWait:SetScript("OnEvent", function()
+                if waiting then local t = waiting; waiting = nil; Chrome:ReloadPrompt(t) end
+            end)
+        end
+        return
+    end
+    prompt = prompt or buildPrompt()
+    prompt.msg:SetText(text or "Reload the interface to finish.")
+    prompt:Show()
 end
 
 -- A button that does before() and then reloads.
@@ -892,8 +940,8 @@ function Chrome:ReloadButton(parent, text, width, height, before)
     return b
 end
 
-function Chrome:Button(parent, text, width, height)
-    local b = CreateFrame("Button", nil, parent)
+function Chrome:Button(parent, text, width, height, template)
+    local b = CreateFrame("Button", nil, parent, template)
     b:SetSize(width or 90, height or 22)
     if self:Modern() then
         -- A rounded tile; on hover the accent ring.
