@@ -175,6 +175,12 @@ function DBProto:_BindChar()
     if self.provisional then
         self.char = Core.applyDefaults({}, self.defaults.char or {})
     else
+        -- New to this addon: no table of its own until now. Worked out once
+        -- for each saved table bound (a late client table is looked at anew).
+        if self._charFor ~= sv then
+            self._charFor = sv
+            self.charIsNew = sv.char[self.charKey] == nil
+        end
         sv.char[self.charKey] = Core.applyDefaults(sv.char[self.charKey] or {}, self.defaults.char or {})
         self.char = sv.char[self.charKey]
     end
