@@ -1,5 +1,38 @@
 # WickCore - Changelog
 
+## 0.10.0 (2026-09-30)
+
+### Added
+
+- Looks. Every Wick addon is drawn in one of eight: Wick Modern (rounded
+  glass, the default), Wick OG (flat panels with the fel corners),
+  Hologram, Rebel, Gilded, Arena, Foundry and Frost. Each brings its own
+  shapes, fonts and colours. Pick one under /wickcore options, or in the
+  first-run setup of Wick's UI.
+- The look and the colours are each character's own. A new character
+  starts on Wick Modern in its class colours; the class colour set and
+  custom colours stay account-wide.
+- Profiles can be one per account, starting from the profile the
+  character is on.
+- A reload prompt for the times the game refuses an addon's reload: its
+  Reload now is the game's own /reload, so it always goes through. Out of
+  combat only, and it closes itself as a fight starts.
+- /wickcore refused names any call the client turned down.
+
+### Changed
+
+- One Appearance section holds the look, the theme and the class colours.
+- Theme swatches wrap to the width of the settings page.
+- The minimap button sits inside the edge of a square map.
+
+### Fixed
+
+- A character that logs in before the client knows its name no longer
+  files its settings under "Unknown", where the next new character would
+  have found them. Old "Unknown" entries are cleared.
+- A weapon's coating is read from the weapon's own tooltip, in every
+  shape the client reports it.
+
 ## 0.9.3 — 2026-09-24
 
 ### Changed
