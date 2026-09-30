@@ -231,6 +231,8 @@ Chrome.Styles = {
     { id = "rebel", name = "Rebel", family = "og", palette = "rebel",
       blurb = "Loud and graphic: black slabs, thick grey outlines, hard shadows, headings on red tags.",
       font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
+      -- Unit frame and nameplate text in the heading face, two sizes up.
+      unitFont = F.anton, unitBump = 3,
       textShadow = true, upper = true, plate = true,
       corners = "none", edge = false, borderPx = 2, hardShadow = { x = 3, y = -3, alpha = 1 },
       health = { friend = "border", enemy = "fel" } },
