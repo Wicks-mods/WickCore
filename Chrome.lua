@@ -233,10 +233,9 @@ Chrome.Styles = {
       font = F.archivo, headingFont = F.anton, uiFont = F.archivo, bump = up(1), headingBump = 2, uiBump = 1,
       -- Unit frame and nameplate text in the heading face, two sizes up.
       unitFont = F.anton, unitBump = 3,
-      -- Unit frames as black slabs: bars set in past the border by a black
-      -- gap, power split from health by the same, a deeper drop shadow on
-      -- the big frames, names in the text colour.
-      unitInset = 3, unitGap = 3, unitShadow = 6, unitPlainNames = true,
+      -- A deeper drop shadow on the big unit frames, and names on red tags
+      -- like the headings.
+      unitShadow = 6, unitNameTag = true,
       textShadow = true, upper = true, plate = true,
       corners = "none", edge = false, borderPx = 2, hardShadow = { x = 3, y = -3, alpha = 1 },
       health = { friend = "border", enemy = "fel" } },
