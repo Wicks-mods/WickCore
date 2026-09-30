@@ -312,6 +312,10 @@ end
 
 -- The style in use, its whole description.
 function Chrome:StyleDef()
+    -- A window drawn in one look whatever the character's (Wick's UI's
+    -- setup is always Wick OG) sets this for as long as it is building.
+    local force = self.forceStyle and self.StyleByID[self.forceStyle]
+    if force then return force end
     local c = self:CharStore()
     return self.StyleByID[c and c.style or "modern"] or self.StyleByID.modern
 end
