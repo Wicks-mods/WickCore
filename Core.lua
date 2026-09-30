@@ -258,7 +258,7 @@ Core.self = Core:NewAddon("WickCore", {
         global = {
             minimap = { angle = 220, hidden = false },
             debug   = false,
-            theme   = "auto",    -- a theme id, or "auto" for the class theme (the default)
+            -- (the theme and the style are each character's: char[...] .theme, .style)
             classColors = "client",  -- "client" or "classic" for the TBC-era codes
             custom  = { main = "383058", accent = "4FC778" },  -- the Custom theme's two colors
         },
@@ -321,7 +321,7 @@ function Core.self:OnEnable()
                 self:Print("WickCoreDB now: " .. type(rawget(_G, "WickCoreDB"))
                     .. ", db bound: " .. tostring(Core.self.db ~= nil)
                     .. ", db.sv is the global: " .. tostring(Core.self.db and Core.self.db.sv == rawget(_G, "WickCoreDB")))
-                self:Print("live table now: theme=" .. tostring(rawget(_G, "WickCoreDB") and WickCoreDB.global and WickCoreDB.global.theme))
+                self:Print("live table now: theme=" .. tostring(Core.Chrome and Core.Chrome.SavedThemeSetting and Core.Chrome:SavedThemeSetting()) .. " (this character's)")
                 self:Print("custom: /wickcore theme custom <main hex> <accent hex>, or pick colors on the options page.")
                 self:Print("themes: " .. table.concat(names, " "))
             elseif want == "custom" and msg:match("^theme%s+custom%s+%S") then

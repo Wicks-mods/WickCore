@@ -162,8 +162,9 @@ end
 --   statusbar    the bar texture the look draws in, where the player has
 --                left the bar texture on the default
 --
--- The choice is account-wide, read from the saved variable directly (as
--- the theme is), and changing it takes a reload: panels are built once.
+-- The choice is each character's own (a new character starts on Wick
+-- Modern), read from the saved variable directly, as the theme is, and
+-- changing it takes a reload: panels are built once.
 local MEDIA = "Interface\\AddOns\\WickCore\\Media\\"
 local TEX = MEDIA .. "Textures\\"
 local FONTS = MEDIA .. "Fonts\\"
@@ -272,15 +273,23 @@ Chrome.Styles = {
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
 
-local function styleStore()
+-- This character's own corner of the saved variable, where its style and
+-- theme live. Read live, as the theme always was: the client hands the
+-- table over just before WickCore loads.
+function Chrome:CharStore()
     local sv = rawget(_G, "WickCoreDB")
-    return type(sv) == "table" and type(sv.global) == "table" and sv.global or nil
+    if type(sv) ~= "table" then return nil end
+    sv.char = sv.char or {}
+    local key = (Core.Profiles and Core.Profiles.CharKey and Core.Profiles:CharKey())
+        or ((UnitName and UnitName("player") or "Unknown") .. " - " .. (GetRealmName and GetRealmName() or "Realm"))
+    sv.char[key] = sv.char[key] or {}
+    return sv.char[key]
 end
 
 -- The style in use, its whole description.
 function Chrome:StyleDef()
-    local g = styleStore()
-    return self.StyleByID[g and g.style or "modern"] or self.StyleByID.modern
+    local c = self:CharStore()
+    return self.StyleByID[c and c.style or "modern"] or self.StyleByID.modern
 end
 
 function Chrome:StyleID() return self:StyleDef().id end
@@ -291,10 +300,9 @@ function Chrome:Style() return self:StyleDef().family end
 function Chrome:Modern() return self:Style() == "modern" end
 
 function Chrome:SetStyle(style)
-    local sv = rawget(_G, "WickCoreDB")
-    if type(sv) ~= "table" then return end
-    sv.global = sv.global or {}
-    sv.global.style = self.StyleByID[style] and style or "modern"
+    local c = self:CharStore()
+    if not c then return end
+    c.style = self.StyleByID[style] and style or "modern"
     -- A look comes with its own colours; they are chosen with it, and can
     -- be changed afterwards like any theme. Wick Modern and Wick OG keep
     -- whatever theme is in use.

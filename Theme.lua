@@ -263,7 +263,10 @@ function Chrome:SaveTheme()
     local g = themeStore()
     if not g then return false end
     self.themeKnown = true
-    g.theme = self.themeSetting
+    -- The theme is this character's; the class colour set and the custom
+    -- colours are preferences, kept for every character.
+    local ch = Chrome.CharStore and Chrome:CharStore()
+    if ch then ch.theme = self.themeSetting end
     g.classColors = self.classColorSet
     g.custom = { main = self.customColors.main, accent = self.customColors.accent }
     -- The saved variable is written and never read back by this client,
@@ -353,16 +356,17 @@ end
 
 -- What is actually on disk right now, for diagnosing a lost setting.
 function Chrome:SavedThemeSetting()
-    local g = themeStore()
-    return g and g.theme
+    local ch = Chrome.CharStore and Chrome:CharStore()
+    return ch and ch.theme
 end
 
 -- Called by WickCore's own OnInitialize, before any product builds a frame.
 function Chrome:ApplySavedTheme(source)
     local global = themeStore()
+    local ch = Chrome.CharStore and Chrome:CharStore()
     -- Did we actually read a choice, or are we falling back? The two must
     -- not be treated alike, because this function saves at the end.
-    local stored = global and global.theme
+    local stored = ch and ch.theme
     local setting = stored or self.DEFAULT_SETTING
     -- Trace for /wickcore theme, so a silent failure is visible.
     self.applyLog = (self.applyLog and (self.applyLog .. ", ") or "")
