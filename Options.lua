@@ -47,7 +47,7 @@ local function ensureRoot()
             if A ~= Core.self then
                 local line = Chrome:Text(f, 12)
                 line:SetPoint("TOPLEFT", 16, y)
-                line:SetText(Chrome:TitleMarkup(A.title) .. "  |cff8F8770" .. tostring(A.version or "") .. "|r")
+                line:SetText(Chrome:TitleMarkup(A.title) .. "  " .. Chrome:Esc("muted") .. tostring(A.version or "") .. "|r")
                 y = y - 18
             end
         end
@@ -192,7 +192,7 @@ function Options:ThemeSection(parent, x, y, opts)
             local h = Chrome.customColors[which]
             local r, g, bb = hexToRGB(h)
             sw:SetColorTexture(r, g, bb, 1)
-            b.lbl:SetText(label .. "  |cff8F8770" .. h .. "|r")
+            b.lbl:SetText(label .. "  " .. Chrome:Esc("muted") .. h .. "|r")
         end
         b:SetScript("OnClick", function()
             local before = Chrome.customColors[which]
@@ -489,7 +489,7 @@ function Options:ShowExport(addon, text, onImport)
         self.exportPanel = p
     end
     local p = self.exportPanel
-    p.title:SetText(Chrome:TitleMarkup(addon.title) .. "  |cff8F8770" .. (onImport and "import" or "export") .. "|r")
+    p.title:SetText(Chrome:TitleMarkup(addon.title) .. "  " .. Chrome:Esc("muted") .. (onImport and "import" or "export") .. "|r")
     p.editBox:SetText(text or "")
     p.editBox:HighlightText()
     p.editBox:SetScript("OnEnterPressed", function(eb)

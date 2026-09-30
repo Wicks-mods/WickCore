@@ -34,6 +34,14 @@ Chrome.Hex = {
     text   = "D4C8A1",
 }
 
+-- A palette colour as a text colour code, read the moment it is used, so
+-- text written after a theme or look change takes that look's colour.
+-- Any token of Chrome.Colors (fel, text, muted...).
+function Chrome:Esc(token)
+    local c = self.Colors[token] or self.Colors.text
+    return ("|cff%02x%02x%02x"):format(math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+end
+
 Chrome.BRACKET  = 10
 Chrome.HEADER_H = 22
 Chrome.FONT     = "Fonts\\FRIZQT__.TTF"
