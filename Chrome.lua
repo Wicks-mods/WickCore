@@ -860,6 +860,11 @@ local pendingReload
 function Chrome:Reload()
     if not InCombatLockdown() then
         ReloadUI()
+        -- If the client refused, the interface is still here half a second
+        -- later and says what to do; after a real reload nothing runs.
+        C_Timer.After(0.5, function()
+            print("|cff4FC778Wick's Mods|r: the game did not let the addon reload the interface here. Type |cffD4C8A1/reload|r to finish; what you chose is already saved.")
+        end)
         return
     end
     print("|cff4FC778Wick's Mods|r: the interface reloads as soon as this fight is over.")
