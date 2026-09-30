@@ -244,6 +244,9 @@ Chrome.Styles = {
       -- A deeper drop shadow on the big unit frames, and names on red tags
       -- like the headings.
       unitShadow = 6, unitNameTag = true,
+      -- Text that asks for the look's own outline gets one here; every
+      -- other look draws it with a soft shadow instead.
+      textOutline = "OUTLINE",
       textShadow = true, upper = true, plate = true,
       corners = "none", edge = false, borderPx = 2, hardShadow = { x = 3, y = -3, alpha = 1 },
       health = { friend = "border", enemy = "fel" } },
