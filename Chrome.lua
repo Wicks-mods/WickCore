@@ -180,6 +180,7 @@ local BASE_MEDIA = {
     roundmask = TEX .. "roundmask.png",
     iconmask  = TEX .. "roundmask.png",
     rivet     = TEX .. "rivet.png",
+    glow      = TEX .. "glow.png",
     font      = PT_SANS,
     slice     = 8,
 }
