@@ -152,6 +152,8 @@ end
 
 -- The lookup key for the current keying mode.
 function DBProto:_KeyFor(mode)
+    -- One profile for every character on the account.
+    if mode == "account" then return "account" end
     if mode == "spec" then return "spec:" .. Profiles:SpecKey() end
     if mode == "mode" then return "mode:" .. Profiles:ModeKey() end
     if mode == "class" then return "class:" .. Profiles:ClassKey() end
@@ -215,6 +217,11 @@ end
 
 -- "char" (default), "spec", "class" or "mode" (game mode + hardcore).
 function DBProto:SetKeyMode(mode)
+    -- The first time the account shares one profile, it is the one this
+    -- character is on, rather than a jump back to Default.
+    if mode == "account" and not self.sv.profileKeys.account then
+        self.sv.profileKeys.account = self.profileName
+    end
     self.sv.keyMode = mode
     local old = self.profileName
     self:_Select(self:_KeyFor(mode))
