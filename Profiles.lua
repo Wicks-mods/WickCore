@@ -21,10 +21,28 @@ DBProto.__index = DBProto
 -- Keys
 -- ============================================================
 
+-- The client can load addons before it has the player's name, and then
+-- UnitName answers "Unknown". A key built from that files every character
+-- that starts that way under one entry, so while the name is missing the
+-- key is held as provisional and nothing is saved under it; at login,
+-- with the name known, the character gets its own.
+function Profiles:PlayerName()
+    local name = UnitName and UnitName("player")
+    if name == nil or name == "" or name == "Unknown" or name == rawget(_G, "UNKNOWNOBJECT") then return nil end
+    return name
+end
+
+function Profiles:NameKnown() return self:PlayerName() ~= nil end
+
 function Profiles:CharKey()
-    local name = UnitName and UnitName("player") or "Unknown"
     local realm = GetRealmName and GetRealmName() or "Realm"
-    return name .. " - " .. realm
+    return (self:PlayerName() or "Unknown") .. " - " .. realm
+end
+
+-- Entries an earlier build saved under the unnamed key belong to no one.
+local function dropUnnamed(sv)
+    for k in pairs(sv.profileKeys) do if k:find("^Unknown %- ") then sv.profileKeys[k] = nil end end
+    for k in pairs(sv.char) do if k:find("^Unknown %- ") then sv.char[k] = nil end end
 end
 
 function Profiles:ClassKey()
@@ -111,9 +129,10 @@ function Profiles:Init(addon, savedVar, defaults)
     db.handedOver = handedOver and not baked
     db.baked = baked
     db.charKey = self:CharKey()
+    db.provisional = not self:NameKnown()
+    if not db.provisional then dropUnnamed(sv) end
     db.global  = Core.applyDefaults(sv.global, defaults.global or {})
-    sv.char[db.charKey] = Core.applyDefaults(sv.char[db.charKey] or {}, defaults.char or {})
-    db.char = sv.char[db.charKey]
+    db:_BindChar()
 
     db:_Select(db:_KeyFor(sv.keyMode))
     return db
@@ -125,6 +144,7 @@ end
 -- nothing is ever written back, while the real values sit on disk. Check
 -- at login and adopt the live table when that has happened.
 function DBProto:Rebind()
+    self:Rekey()
     local live = _G[self.savedVar]
     if type(live) ~= "table" or live == self.sv then return false end
     return self:RebindTo(live)
@@ -143,10 +163,37 @@ function DBProto:RebindTo(live)
     live.keyMode     = live.keyMode     or self.sv.keyMode or "char"
     self.sv = live
     self.global = Core.applyDefaults(live.global, self.defaults.global or {})
-    live.char[self.charKey] = Core.applyDefaults(live.char[self.charKey] or {}, self.defaults.char or {})
-    self.char = live.char[self.charKey]
+    self:_BindChar()
     self:_Select(self:_KeyFor(live.keyMode))
     self:_Fire("OnProfileChanged", self.profileName, self.profileName)
+    return true
+end
+
+-- This character's own table, or a loose one while its name is unknown.
+function DBProto:_BindChar()
+    local sv = self.sv
+    if self.provisional then
+        self.char = Core.applyDefaults({}, self.defaults.char or {})
+    else
+        sv.char[self.charKey] = Core.applyDefaults(sv.char[self.charKey] or {}, self.defaults.char or {})
+        self.char = sv.char[self.charKey]
+    end
+end
+
+-- The name has arrived: key this character by it and pick its profile.
+-- Before the addon is enabled nothing has been built from the profile yet,
+-- so the switch is quiet; after, it is announced like any other.
+function DBProto:Rekey()
+    if not self.provisional or not Profiles:NameKnown() then return false end
+    self.provisional = nil
+    self.charKey = Profiles:CharKey()
+    dropUnnamed(self.sv)
+    self:_BindChar()
+    local was = self.profileName
+    self:_Select(self:_KeyFor(self.sv.keyMode))
+    if self.addon and self.addon.enabled and was ~= self.profileName then
+        self:_Fire("OnProfileChanged", self.profileName, was)
+    end
     return true
 end
 
@@ -161,6 +208,14 @@ function DBProto:_KeyFor(mode)
 end
 
 function DBProto:_Select(key)
+    -- A provisional key reads nothing and saves nothing.
+    if self.provisional and key == self.charKey then
+        self.key = key
+        self.profileName = self.profileName or "Default"
+        self.sv.profiles[self.profileName] = Core.applyDefaults(self.sv.profiles[self.profileName] or {}, self.defaults.profile or {})
+        self.profile = self.sv.profiles[self.profileName]
+        return
+    end
     local name = self.sv.profileKeys[key] or "Default"
     self.sv.profileKeys[key] = name
     self.key = key

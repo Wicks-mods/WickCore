@@ -281,7 +281,14 @@ function Chrome:CharStore()
     local sv = rawget(_G, "WickCoreDB")
     if type(sv) ~= "table" then return nil end
     sv.char = sv.char or {}
-    local key = (Core.Profiles and Core.Profiles.CharKey and Core.Profiles:CharKey())
+    -- Before the client has the player's name, a loose table: saving the
+    -- style under "Unknown" would hand it to every character next time.
+    local P = Core.Profiles
+    if P and P.NameKnown and not P:NameKnown() then
+        Chrome._unnamed = Chrome._unnamed or {}
+        return Chrome._unnamed
+    end
+    local key = (P and P.CharKey and P:CharKey())
         or ((UnitName and UnitName("player") or "Unknown") .. " - " .. (GetRealmName and GetRealmName() or "Realm"))
     sv.char[key] = sv.char[key] or {}
     return sv.char[key]
