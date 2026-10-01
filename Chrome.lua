@@ -286,6 +286,13 @@ Chrome.Styles = {
       glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
       health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true,
       sheen = { top = 0.32, bottom = 0.35 } },
+    -- Clean cut: the flat family with nothing added. One black pixel round
+    -- every panel and nothing outside it, square corners, no shadows or
+    -- glows, panels a little see-through, text with a thin outline.
+    { id = "crisp", name = "Crisp", family = "og", palette = "crisp",
+      blurb = "Clean cut: see-through dark grey, one black pixel round everything, square corners, your class colour as the accent.",
+      font = PT_SANS, bump = modernBump, textShadow = true, textOutline = "OUTLINE",
+      corners = "none", edge = false, borderPx = 1, glass = 0.85 },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
@@ -741,6 +748,9 @@ function Chrome:NewPanel(name, o)
         self:AddBorder(f)
     else
         bg = self:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints()
+        -- A flat look can be see-through (Crisp). On the region, so a
+        -- theme repaint, which sets the colour, leaves it alone.
+        bg:SetAlpha(self:GlassAlpha(1))
         self:AddBorder(f)
     end
     f.bg = bg

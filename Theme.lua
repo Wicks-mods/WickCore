@@ -51,6 +51,9 @@ local LOOK_PALETTES = {
     { id = "arena",     name = "Arena",     fel = "FF5263", void = "0C1620", shadow = "213040", border = "3E5163", text = "ECE8E1" },
     { id = "foundry",   name = "Foundry",   fel = "FF8A1F", void = "18181B", shadow = "242428", border = "5A5A62", text = "D8D2C4" },
     { id = "frost",     name = "Frost",     fel = "8FD3FF", void = "0B1117", shadow = "131C24", border = "3C5566", text = "E6F1F7" },
+    -- Neutral darks under the player's own class colour: the accent is
+    -- the class, the rest stays grey, so it reads the same on every class.
+    { id = "crisp",     name = "Crisp",     fel = "class",  void = "121212", shadow = "0A0A0A", border = "000000", text = "F0F0F0" },
 }
 local CLASS_ORDER = { "SHAMAN", "DRUID", "HUNTER", "MAGE", "PRIEST", "PALADIN", "ROGUE", "WARRIOR" }
 
@@ -164,8 +167,18 @@ local function buildThemes()
     end
     -- The looks' own palettes, chosen with the look (Chrome.Styles).
     for _, look in ipairs(LOOK_PALETTES) do
+        local accent
+        if look.fel == "class" then
+            -- The class colour in the set the player chose. Before the
+            -- client knows the class it is Fel, and login builds it again.
+            local _, token = UnitClass("player")
+            accent = token and classAccent(token) or rgb(FEL.fel)
+            if not token then Chrome.lookNeedsClass = true end
+        else
+            accent = rgb(look.fel)
+        end
         add({ id = look.id, name = look.name, look = true,
-              colors = { fel = rgb(look.fel), void = rgb(look.void), shadow = rgb(look.shadow),
+              colors = { fel = accent, void = rgb(look.void), shadow = rgb(look.shadow),
                          border = rgb(look.border), text = rgb(look.text) } })
     end
     local cc = Chrome.customColors
@@ -274,6 +287,8 @@ flush:SetScript("OnEvent", function(_, event)
         if Chrome.themeKnown then Chrome:SaveTheme() end
         return
     end
+    -- A look taking the class colour, built before the class was known.
+    if Chrome.lookNeedsClass then Chrome.lookNeedsClass = nil; buildThemes() end
     Chrome:ApplySavedTheme()
 end)
 
