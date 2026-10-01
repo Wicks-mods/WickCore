@@ -531,7 +531,7 @@ function Store:RestoreAll()
         if addon.enabled and self:RestoreFor(addon) then n = n + 1 end
     end
     if n > 0 and Core.Chrome and Core.Chrome.ApplySavedTheme then
-        pcall(Core.Chrome.ApplySavedTheme, Core.Chrome, "store")
+        pcall(Core.Chrome.ApplySavedTheme, Core.Chrome)
     end
     return n
 end

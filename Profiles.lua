@@ -80,21 +80,6 @@ function Profiles:Init(addon, savedVar, defaults)
     defaults = defaults or {}
     local sv = _G[savedVar]
     local handedOver = type(sv) == "table"
-    -- Exactly what the client had handed over at binding time. If this
-    -- says the variable is missing, the client did not load the file.
-    do
-        local t = type(sv)
-        local keyed = 0
-        if t == "table" and type(sv.profileKeys) == "table" then
-            for _ in pairs(sv.profileKeys) do keyed = keyed + 1 end
-        end
-        Profiles.traces = Profiles.traces or {}
-        Profiles.varTypes = Profiles.varTypes or {}
-        Profiles.varTypes[savedVar] = t
-        Profiles.traces[savedVar] = ("var=%s, profileKeys=%d, theme=%s"):format(
-            t, keyed, tostring(t == "table" and sv.global and sv.global.theme))
-        Profiles.lastInit = savedVar .. ": " .. Profiles.traces[savedVar]
-    end
     if type(sv) ~= "table" then sv = {} end
     -- Always publish it. Products read their saved variable by name, and a
     -- table restored from the store has to be reachable that way too.
@@ -113,10 +98,6 @@ function Profiles:Init(addon, savedVar, defaults)
         callbacks = {},
     }, DBProto)
 
-    -- Did our own assignment of the global actually take effect?
-    Profiles.traces[savedVar] = Profiles.traces[savedVar]
-        .. ", after bind=" .. type(rawget(_G, savedVar))
-        .. ", same=" .. tostring(rawget(_G, savedVar) == sv)
     db.fromStore = not handedOver
     -- Only the client counts as having handed the table over. WicksProfile
     -- assigns globals at file scope from a bake, and the store must still

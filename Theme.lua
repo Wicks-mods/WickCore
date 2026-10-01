@@ -221,17 +221,6 @@ Chrome.activeTheme = Chrome.DEFAULT_THEME
 -- was bound still survives the session.
 Chrome.themeSetting = Chrome.DEFAULT_SETTING
 
--- What the client handed us before any of our own code touched it. If the
--- saved variable is missing here, the client never loaded the file and no
--- amount of reading it later will help.
-do
-    local sv = rawget(_G, "WickCoreDB")
-    Chrome.bootTrace = ("sv=%s, global=%s, theme=%s"):format(
-        type(sv),
-        type(sv) == "table" and type(sv.global) or "nil",
-        tostring(type(sv) == "table" and sv.global and sv.global.theme))
-end
-
 -- Always go to the live saved variable first. The client assigns it just
 -- before ADDON_LOADED, and if our profile was ever bound to a table the
 -- client then replaced, that copy is an orphan: reads see defaults and
@@ -244,14 +233,6 @@ local function themeStore()
         return sv.global
     end
     return Core.self and Core.self.db and Core.self.db.global
-end
-
--- True when the profile layer is holding a table the client has replaced.
-local function profileIsOrphaned()
-    local sv = rawget(_G, "WickCoreDB")
-    local db = Core.self and Core.self.db and Core.self.db.global
-    if type(sv) ~= "table" or not db then return nil end
-    return sv.global ~= db
 end
 
 -- True once a saved theme has been read back, or the player has chosen
@@ -293,7 +274,7 @@ flush:SetScript("OnEvent", function(_, event)
         if Chrome.themeKnown then Chrome:SaveTheme() end
         return
     end
-    Chrome:ApplySavedTheme("login")
+    Chrome:ApplySavedTheme()
 end)
 
 local listeners = {}
@@ -354,24 +335,14 @@ function Chrome:ThemeSetting()
     return self.themeSetting or self.DEFAULT_SETTING
 end
 
--- What is actually on disk right now, for diagnosing a lost setting.
-function Chrome:SavedThemeSetting()
-    local ch = Chrome.CharStore and Chrome:CharStore()
-    return ch and ch.theme
-end
-
 -- Called by WickCore's own OnInitialize, before any product builds a frame.
-function Chrome:ApplySavedTheme(source)
+function Chrome:ApplySavedTheme()
     local global = themeStore()
     local ch = Chrome.CharStore and Chrome:CharStore()
     -- Did we actually read a choice, or are we falling back? The two must
     -- not be treated alike, because this function saves at the end.
     local stored = ch and ch.theme
     local setting = stored or self.DEFAULT_SETTING
-    -- Trace for /wickcore theme, so a silent failure is visible.
-    self.applyLog = (self.applyLog and (self.applyLog .. ", ") or "")
-        .. tostring(source or "init") .. "=" .. tostring(setting)
-        .. (profileIsOrphaned() and " (orphaned profile)" or "")
     -- Old saved ids from the first cut map onto the class ids.
     local legacy = { storm = "shaman", wild = "druid", quiver = "hunter", arcane = "mage",
                      holy = "priest", light = "paladin", shadow = "rogue", iron = "warrior" }
@@ -394,7 +365,7 @@ function Chrome:ApplySavedTheme(source)
     -- back to Fel and then wrote Fel over the real setting: one read that
     -- came too early turned into the choice being gone for good. On this
     -- client the settings arrive from the macro store, which can land after
-    -- login, and Store re-applies with source "store" when it does. The
+    -- login, and Store re-applies the theme when it does. The
     -- logout path has always guarded this with themeKnown; this is the same
     -- guard at the other end.
     if stored then self:SaveTheme() end

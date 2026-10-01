@@ -14,7 +14,7 @@ if not Core then return end
 
 Core._sourceAddon = ADDON
 Core.MAJOR, Core.MINOR = MAJOR, MINOR
-Core.VERSION = "0.9.0"
+Core.VERSION = "0.10.0"
 _G.WickCore = Core
 
 -- Persist across a same-session upgrade of the library.
@@ -270,7 +270,7 @@ function Core.self:OnInitialize()
     -- The saved variable is readable now: the style's font becomes the one
     -- products find in Chrome.FONT.
     if Core.Chrome and Core.Chrome.Font then Core.Chrome.FONT = Core.Chrome:Font() end
-    if Core.Chrome and Core.Chrome.ApplySavedTheme then Core.Chrome:ApplySavedTheme("init") end
+    if Core.Chrome and Core.Chrome.ApplySavedTheme then Core.Chrome:ApplySavedTheme() end
 end
 
 function Core.self:OnEnable()
@@ -304,24 +304,7 @@ function Core.self:OnEnable()
                 for _, t in ipairs(Chrome.Themes) do
                     names[#names + 1] = (t.id == Chrome.activeTheme and "|cff" .. t.hex.fel .. t.id .. "|r" or t.id)
                 end
-                local saved = Chrome:SavedThemeSetting()
                 self:Print("theme: " .. tostring(Chrome:ThemeSetting()) .. " (" .. Chrome.activeTheme .. "), class colors: " .. Chrome.classColorSet .. ". Use /wickcore theme <id|auto|classic|client|dump>.")
-                self:Print("saved to disk: " .. tostring(saved) .. (saved == Chrome:ThemeSetting() and "" or "  |cffE04B4B(not matching, report this)|r"))
-                self:Print("applied this session: " .. tostring(Chrome.applyLog or "never"))
-                self:Print("at file load: " .. tostring(Chrome.bootTrace or "?"))
-                local vt = Core.Profiles and Core.Profiles.varTypes
-                if vt then
-                    local parts = {}
-                    for name, t in pairs(vt) do parts[#parts + 1] = name .. "=" .. t end
-                    table.sort(parts)
-                    self:Print("every saved variable at binding: " .. table.concat(parts, "  "))
-                end
-                local tr = Core.Profiles and Core.Profiles.traces
-                self:Print("WickCoreDB at binding: " .. tostring(tr and tr.WickCoreDB or "never bound"))
-                self:Print("WickCoreDB now: " .. type(rawget(_G, "WickCoreDB"))
-                    .. ", db bound: " .. tostring(Core.self.db ~= nil)
-                    .. ", db.sv is the global: " .. tostring(Core.self.db and Core.self.db.sv == rawget(_G, "WickCoreDB")))
-                self:Print("live table now: theme=" .. tostring(Core.Chrome and Core.Chrome.SavedThemeSetting and Core.Chrome:SavedThemeSetting()) .. " (this character's)")
                 self:Print("custom: /wickcore theme custom <main hex> <accent hex>, or pick colors on the options page.")
                 self:Print("themes: " .. table.concat(names, " "))
             elseif want == "custom" and msg:match("^theme%s+custom%s+%S") then
