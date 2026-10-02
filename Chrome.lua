@@ -735,7 +735,7 @@ function Chrome:NewPanel(name, o)
     f:SetClampedToScreen(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", function(s) s:StartMoving() end)
+    f:SetScript("OnDragStart", function(s) if not Chrome:MovableClaimed(s) then s:StartMoving() end end)
     f:SetScript("OnDragStop", function(s)
         s:StopMovingOrSizing()
         if s.db then Chrome:SavePosition(s, s.db) end
@@ -891,12 +891,98 @@ function Chrome:SavePosition(f, db)
 end
 
 function Chrome:RestorePosition(f, db)
+    -- A frame a UI with movers has claimed is placed by that UI.
+    if self:MovableClaimed(f) then return end
     if f.wickResizable and db.width and db.height then
         f:SetSize(db.width, db.height)
     end
     if db.point then
         f:ClearAllPoints()
         f:SetPoint(db.point, UIParent, db.relPoint or db.point, db.x or 0, db.y or 0)
+    end
+end
+
+-- ============================================================
+-- Movable frames
+-- ============================================================
+-- A product's bars, buttons and counters that the player can drag are
+-- registered here, so a UI that keeps movers of its own (Wick's UI) can
+-- list them with everything else and take over where they sit. Without
+-- one, nothing changes: the product's own drag and saved position stay in
+-- charge. A product asks Chrome:MovableClaimed(frame) before it restores
+-- or drags a frame, so a claimed frame is left to the UI.
+--
+-- Chrome:RegisterMovable(frame, {
+--     key     = "questkey",            -- unique across the suite
+--     title   = "Quest Key",           -- what the player reads on the mover
+--     default = "CENTER,UIParent,CENTER,0,-150",  -- where it starts; where it is now if nil
+--     onClaim = function(frame, entry) end,       -- the UI took it: stand the product's drag down
+-- })
+local movables = { list = {}, order = {}, byFrame = setmetatable({}, { __mode = "k" }), watchers = {} }
+Chrome.movables = movables
+
+-- "POINT,UIParent,relPoint,x,y" for where a frame sits, the form the
+-- movers read. A frame hung on something other than UIParent is read
+-- through its centre.
+function Chrome:PointString(frame)
+    local point, rel, relPoint, x, y = frame:GetPoint(1)
+    if point and (rel == nil or rel == UIParent) then
+        return ("%s,UIParent,%s,%d,%d"):format(point, relPoint or point,
+            math.floor((x or 0) + 0.5), math.floor((y or 0) + 0.5))
+    end
+    local cx, cy = frame:GetCenter()
+    local W, H = UIParent:GetWidth(), UIParent:GetHeight()
+    if not (cx and cy and W and H) then return "CENTER,UIParent,CENTER,0,0" end
+    local s = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    return ("CENTER,UIParent,CENTER,%d,%d"):format(math.floor(cx * s - W / 2 + 0.5), math.floor(cy * s - H / 2 + 0.5))
+end
+
+function Chrome:RegisterMovable(frame, spec)
+    if not (frame and spec and spec.key) then return nil end
+    local e = movables.list[spec.key]
+    if not e then
+        e = { key = spec.key }
+        movables.list[spec.key] = e
+        movables.order[#movables.order + 1] = spec.key
+    end
+    e.frame = frame
+    e.title = spec.title or spec.key
+    e.addon = spec.addon
+    e.default = spec.default or self:PointString(frame)
+    e.onClaim = spec.onClaim
+    movables.byFrame[frame] = e
+    for _, w in ipairs(movables.watchers) do Core.safe(w.add, e) end
+    return e
+end
+
+-- A UI that wants the suite's frames: add runs for each one registered,
+-- now and later; resize when a product says a frame changed size.
+function Chrome:WatchMovables(add, resize)
+    movables.watchers[#movables.watchers + 1] = { add = add, resize = resize }
+    for _, key in ipairs(movables.order) do Core.safe(add, movables.list[key]) end
+end
+
+-- The UI takes over where the frame sits. The product's onClaim stands
+-- its own drag and restore down.
+function Chrome:ClaimMovable(key)
+    local e = movables.list[key]
+    if not e or e.claimed then return e end
+    e.claimed = true
+    if e.onClaim then Core.safe(e.onClaim, e.frame, e) end
+    return e
+end
+
+function Chrome:MovableClaimed(keyOrFrame)
+    local e = type(keyOrFrame) == "table" and movables.byFrame[keyOrFrame] or movables.list[keyOrFrame]
+    return e ~= nil and e.claimed == true
+end
+
+-- A product whose frame grew or shrank (a bar that gained a button).
+function Chrome:MovableResized(key)
+    local e = movables.list[key]
+    if not e then return end
+    for _, w in ipairs(movables.watchers) do
+        if w.resize then Core.safe(w.resize, e) end
     end
 end
 

@@ -243,6 +243,16 @@ end
 function AddonProto:RegisterOptions(buildFn) return Core.Options:Register(self, buildFn) end
 function AddonProto:OpenOptions() return Core.Options:Open(self.name) end
 function AddonProto:RegisterLauncher(opts) return Core.Launcher:Register(self, opts) end
+-- A frame of this product the player can drag (a bar, a button, a
+-- counter): a UI with movers of its own lists and places it. See
+-- Chrome:RegisterMovable.
+function AddonProto:RegisterMovable(frame, spec)
+    spec = spec or {}
+    spec.addon = self.name
+    spec.key = spec.key or self.name
+    spec.title = spec.title or self.title
+    return Core.Chrome:RegisterMovable(frame, spec)
+end
 function AddonProto:NewLocale(locale, isDefault) return Core.Locale:New(self.name, locale, isDefault) end
 
 -- ============================================================

@@ -14,6 +14,13 @@
   flavour.
 - A TBC-shaped stub client for the offline harness
   (`run.py --tbc`, `--all` for every shape).
+- Movable frames. A product registers a bar, button or counter the
+  player can drag (`Chrome:RegisterMovable`, or `A:RegisterMovable` on
+  its addon object), with where it sits as the default. A UI with
+  movers of its own (Wick's UI) lists it with everything else and
+  takes over its place, telling the product to stand its own drag
+  down; without one nothing changes. `Chrome:RestorePosition` leaves
+  a claimed frame alone.
 
 ### Changed
 
