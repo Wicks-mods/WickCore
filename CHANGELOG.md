@@ -1,5 +1,29 @@
 # WickCore - Changelog
 
+## 0.10.1 (2026-10-01)
+
+### Added
+
+- Crisp, a ninth look. Clean cut: see-through dark grey panels, one
+  black pixel round everything, square corners, no shadows or glows,
+  and your class colour as the accent. Pick it under /wickcore options,
+  or in the first-run setup of Wick's UI.
+
+### Changed
+
+- A look's palette can take your class colour as its accent, in the
+  class colour set you chose. Crisp is the first look to do it.
+- Flat panels, the ones Wick OG and its family draw, take a look's
+  glass, so a look can make them see-through.
+- /wickcore theme no longer prints the saved-variable traces. The
+  client hands settings back at load again, so they had nothing left
+  to show.
+
+### Fixed
+
+- /wickcore addons and the version broadcast said 0.9.0 all through
+  the 0.10.0 release. They give the real number now.
+
 ## 0.10.0 (2026-09-30)
 
 ### Added
