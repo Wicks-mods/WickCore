@@ -1,5 +1,47 @@
 # WickCore - Changelog
 
+## 0.11.0 (unreleased)
+
+### Added
+
+- TBC Classic Anniversary. WickCore loads on 2.5.6 as well as Forever,
+  from one folder and one version. The client is the same engine
+  generation as Forever with the Classic interface on top, so the
+  modern dialect, the Settings panel and Edit Mode are all there; what
+  it lacks is read off at load as capability flags (`Client.hasEditMode`,
+  `hasSettings`, `hasAuraContainer`, `hasPing`, `hasBossFrames`,
+  `hasObjectiveTracker`), which products branch on instead of the
+  flavour.
+- A TBC-shaped stub client for the offline harness
+  (`run.py --tbc`, `--all` for every shape).
+
+### Changed
+
+- On TBC a character starts on Wick OG in fel green, the look every TBC
+  addon has always had, so an update changes nothing a player did not
+  ask for. Modern and the class colours are one click away in
+  /wickcore options. Forever still starts on Wick Modern.
+- Combat is combat on every client: `Restrict:IsCombat()` reads combat
+  lockdown as well as the restriction state, the regen events are
+  watched everywhere, and one Combat notification fires per change of
+  state whichever event carried it. TBC has the restriction API and
+  never restricts anything.
+- The macro settings store only arms on Forever, the client it was
+  written for. Elsewhere it says it is not needed and never offers.
+- The line naming a blocked or forbidden call now prints only with
+  /wickcore debug on. The record is kept either way for /wickcore
+  refused.
+- The options root no longer names a client.
+
+### Fixed
+
+- Opening a Custom colour picker switched the theme to Custom before
+  anything was picked, and Cancel put the colours back but not the
+  theme.
+- `Dialect.IsSpellKnown(id, true)` passed a boolean where
+  `C_SpellBook.IsSpellKnown` wants a spell bank, so every pet spell
+  read as unknown.
+
 ## 0.10.1 (2026-10-01)
 
 ### Added

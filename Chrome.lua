@@ -317,6 +317,12 @@ function Chrome:CharStore()
     return sv.char[key]
 end
 
+-- The look a character starts on. Forever starts on Wick Modern. TBC
+-- Anniversary starts on Wick OG, the flat fel-green look every TBC addon
+-- had before WickCore, so an update changes nothing a player did not ask
+-- for; Modern is one click away in the options.
+Chrome.DEFAULT_STYLE = (Core.Client and Core.Client.isTBC) and "og" or "modern"
+
 -- The style in use, its whole description.
 function Chrome:StyleDef()
     -- A window drawn in one look whatever the character's (Wick's UI's
@@ -324,7 +330,7 @@ function Chrome:StyleDef()
     local force = self.forceStyle and self.StyleByID[self.forceStyle]
     if force then return force end
     local c = self:CharStore()
-    return self.StyleByID[c and c.style or "modern"] or self.StyleByID.modern
+    return self.StyleByID[c and c.style or self.DEFAULT_STYLE] or self.StyleByID[self.DEFAULT_STYLE] or self.StyleByID.modern
 end
 
 function Chrome:StyleID() return self:StyleDef().id end

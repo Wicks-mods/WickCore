@@ -416,6 +416,11 @@ end
 function Store:Needed()
     local db = Core.self and Core.self.db
     if not db then return false, "WickCore has no db" end
+    -- The store exists for the Forever beta, which once lost every saved
+    -- variable at load. Any other client keeps settings itself, and a
+    -- first session there (no file on disk yet) must not read as the
+    -- client handing nothing back.
+    if not (Core.Client and Core.Client.isForever) then return false, "not needed on this client" end
     if db.handedOver then return false, "the client handed saved variables over, so they are being kept the normal way" end
     if not GetNumMacros or not CreateMacro then return false, "this client has no macro API" end
     return true, "the client handed nothing over at load"

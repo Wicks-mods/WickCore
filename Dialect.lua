@@ -297,10 +297,18 @@ function D.GetSpellCooldown(spell)
     end
 end
 
-local spellKnown = chose("IsSpellKnown", fn("C_SpellBook", "IsSpellKnown"), glob("IsSpellKnown"))
+local spellKnown, spellKnownModern = chose("IsSpellKnown", fn("C_SpellBook", "IsSpellKnown"), glob("IsSpellKnown"))
 function D.IsSpellKnown(spellID, isPet)
     if not spellKnown then return false end
-    local ok, v = pcall(spellKnown, spellID, isPet)
+    local second = isPet
+    if spellKnownModern then
+        -- C_SpellBook.IsSpellKnown takes a spell bank, not a pet flag; a
+        -- boolean there throws and the pcall answered false for every
+        -- pet spell.
+        local banks = rawget(_G, "Enum") and Enum.SpellBookSpellBank
+        second = isPet and ((banks and banks.Pet) or 1) or nil
+    end
+    local ok, v = pcall(spellKnown, spellID, second)
     return ok and v == true
 end
 

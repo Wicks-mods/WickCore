@@ -222,11 +222,12 @@ function Chrome:RebuildThemes()
     if active and self.ThemeByID[active] then self:ApplyTheme(active) end
 end
 
--- Fel is the theme anything unknown falls back to; the setting a new
--- install starts on is the player's class, as Wick Modern and Wick OG are
--- drawn in by default.
+-- Fel is the theme anything unknown falls back to. The setting a new
+-- install starts on is the player's class on Forever, and fel on TBC
+-- Anniversary, where the suite has always been fel green and an update
+-- should look like the addons the player already had.
 Chrome.DEFAULT_THEME = "fel"
-Chrome.DEFAULT_SETTING = "auto"
+Chrome.DEFAULT_SETTING = (Core.Client and Core.Client.isTBC) and "fel" or "auto"
 Chrome.activeTheme = Chrome.DEFAULT_THEME
 
 -- The player's choice lives here first. The saved variable is written on

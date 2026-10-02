@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 20506, 16001
 ## Title: |cffD4C8A1Wick|r|cff4FC778Core|r
 ## Notes: Shared platform for the Wick suite. Brand chrome, profiles, one options panel, client dialect shim, restriction guard, launcher, localization, version broadcast.
 ## Author: Wick

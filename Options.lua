@@ -41,7 +41,7 @@ local function ensureRoot()
         title:SetText(Chrome:TitleMarkup("Wick's Mods"))
         local sub = Chrome:Text(f, 11, Chrome.Colors.muted)
         sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-        sub:SetText("Precision addons for World of Warcraft: Forever. Each addon has its own page below.")
+        sub:SetText("Precision addons for World of Warcraft. Each addon has its own page below.")
         local y = -64
         for _, A in Core:IterateAddons() do
             if A ~= Core.self then
@@ -196,15 +196,22 @@ function Options:ThemeSection(parent, x, y, opts)
         end
         b:SetScript("OnClick", function()
             local before = Chrome.customColors[which]
+            local themeBefore = Chrome:ThemeSetting()
             local r, g, bb = hexToRGB(before)
             local function apply()
                 local nr, ng, nb = ColorPickerFrame:GetColorRGB()
+                -- The picker calls this once as it opens, before the player has
+                -- touched anything. Opening a picker is not choosing Custom.
+                local untouched = math.abs(nr - r) < 0.003 and math.abs(ng - g) < 0.003 and math.abs(nb - bb) < 0.003
+                if untouched and Chrome.activeTheme ~= "custom" then return end
                 if which == "main" then Chrome:SetCustomColors({ nr, ng, nb }, nil) else Chrome:SetCustomColors(nil, { nr, ng, nb }) end
                 if Chrome.activeTheme ~= "custom" then Chrome:SetTheme("custom") end
                 refresh()
             end
             openPicker(r, g, bb, apply, function()
                 if which == "main" then Chrome:SetCustomColors(before, nil) else Chrome:SetCustomColors(nil, before) end
+                -- Cancel puts the theme back too, not just the colours.
+                if themeBefore ~= "custom" and Chrome.activeTheme == "custom" then Chrome:SetTheme(themeBefore) end
                 refresh()
             end)
         end)

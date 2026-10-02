@@ -30,7 +30,9 @@ Client.isWrath      = Client.interface >= 30000 and Client.interface < 40000
 Client.isRetail     = Client.interface >= 100000 and not Client.isForever
 
 -- Retail-modern API dialect: C_Item / C_Spell / C_Container / C_UnitAuras.
--- Forever, Cata Classic onward, and retail all speak it. TBC and Era do not.
+-- Forever, retail, and TBC Anniversary since 2.5.6 (a 12.x-engine client
+-- with Classic FrameXML) all speak it. The legacy globals TBC addons call
+-- are deprecation fallbacks there, kept alive by a CVar.
 Client.isModern = (rawget(_G, "C_Item") and C_Item.GetItemInfo) and true or false
 
 -- Midnight-rule restrictions (secret values) exist on this client.
@@ -41,6 +43,22 @@ if rawget(_G, "C_Secrets") and C_Secrets.HasSecretRestrictions then
 end
 
 Client.hasTraits = (rawget(_G, "C_Traits") and rawget(_G, "C_ClassTalents")) and true or false
+
+-- Capabilities, detected rather than inferred from the flavour. Products
+-- branch on these, never on isForever/isTBC, so a client that gains or
+-- loses a system changes one line here and no caller.
+local function hasTemplate(name)
+    local util = rawget(_G, "C_XMLUtil")
+    if not (util and type(util.GetTemplateInfo) == "function") then return false end
+    local ok, info = pcall(util.GetTemplateInfo, name)
+    return ok and info ~= nil
+end
+Client.hasEditMode         = rawget(_G, "EditModeManagerFrame") ~= nil
+Client.hasSettings         = (rawget(_G, "Settings") and Settings.RegisterCanvasLayoutCategory) and true or false
+Client.hasAuraContainer    = hasTemplate("CustomAuraContainerTemplate")   -- the 12.0 aura intrinsic
+Client.hasPing             = hasTemplate("PingableUnitFrameTemplate")
+Client.hasBossFrames       = rawget(_G, "BossTargetFrameContainer") ~= nil
+Client.hasObjectiveTracker = rawget(_G, "ObjectiveTrackerFrame") ~= nil
 
 function Client:GameMode()
     local GR = rawget(_G, "C_GameRules")
@@ -83,10 +101,12 @@ function Client:Report()
         string.format("%s %s (%s) interface %d, project %s",
             self:Flavor(), tostring(self.version), tostring(self.build),
             self.interface, tostring(self.project)),
-        string.format("dialect %s, secrets %s, traits %s, game mode %s%s",
+        string.format("dialect %s, secrets %s, traits %s, edit mode %s, aura containers %s, game mode %s%s",
             self.isModern and "modern" or "legacy",
             self.hasSecrets and "on" or "off",
             self.hasTraits and "yes" or "no",
+            self.hasEditMode and "yes" or "no",
+            self.hasAuraContainer and "yes" or "no",
             tostring(self:GameMode()),
             self:IsHardcore() and " (hardcore)" or ""),
     }

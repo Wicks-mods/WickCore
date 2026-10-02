@@ -32,17 +32,19 @@ function R:IsSecret(v)
     return ok and s == true
 end
 
--- Is a restriction type active right now. Falls back to combat lockdown on
--- clients without the 12.0 API.
+-- Is a restriction type active right now. Combat is also combat lockdown:
+-- TBC 2.5.6 has the restriction API and never restricts anything, yet a
+-- fight is still a fight for every frame that must not be touched in one.
 function R:IsActive(kind)
+    local active = false
     if RA and RA.IsAddOnRestrictionActive and TYPES and TYPES[kind] ~= nil then
         local ok, v = pcall(RA.IsAddOnRestrictionActive, TYPES[kind])
-        if ok then return v == true end
+        if ok then active = (v == true) end
     end
-    if kind == "Combat" then
+    if kind == "Combat" and not active then
         return InCombatLockdown() and true or false
     end
-    return false
+    return active
 end
 
 function R:IsCombat() return self:IsActive("Combat") end
@@ -144,10 +146,13 @@ local function noteRefusal(kind, addon, fn)
         return
     end
     R.refusals[key] = { kind = kind, addon = addon, fn = fn, count = 1 }
-    -- Once per distinct call. A popup in a loop should not become a
-    -- wall of chat.
-    Core.Print("WickCore", ("%s was %s from %s. Tell Wick: this is the name the popup will not give you.")
-        :format(addon, kind == "forbidden" and "forbidden" or "blocked", fn))
+    -- Once per distinct call, and only with /wickcore debug on: the record
+    -- is always kept for /wickcore refused, but a player's chat frame is
+    -- not where a protected-function name belongs.
+    if Core.debug then
+        Core.Print("WickCore", ("%s was %s from %s. Tell Wick: this is the name the popup will not give you.")
+            :format(addon, kind == "forbidden" and "forbidden" or "blocked", fn))
+    end
 end
 
 function R:Refusals()
@@ -160,10 +165,20 @@ end
 local frame = CreateFrame("Frame")
 pcall(frame.RegisterEvent, frame, "ADDON_ACTION_FORBIDDEN")
 pcall(frame.RegisterEvent, frame, "ADDON_ACTION_BLOCKED")
-local hasStateEvent = pcall(frame.RegisterEvent, frame, "ADDON_RESTRICTION_STATE_CHANGED")
-if not hasStateEvent then
-    pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
-    pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_ENABLED")
+pcall(frame.RegisterEvent, frame, "ADDON_RESTRICTION_STATE_CHANGED")
+-- Combat lockdown is watched on every client. Forever announces combat
+-- through the restriction event as well, so the two are folded into one
+-- Combat notification: it fires on a change of state, whichever event
+-- carried the news.
+pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_DISABLED")
+pcall(frame.RegisterEvent, frame, "PLAYER_REGEN_ENABLED")
+
+R.inCombat = false
+local function combatChanged()
+    local now = R:IsCombat()
+    if now == R.inCombat then return end
+    R.inCombat = now
+    fire("Combat", now)
 end
 
 frame:SetScript("OnEvent", function(_, event, a, b)
@@ -174,10 +189,8 @@ frame:SetScript("OnEvent", function(_, event, a, b)
     elseif event == "ADDON_RESTRICTION_STATE_CHANGED" then
         -- a = AddOnRestrictionType value, b = AddOnRestrictionState (0 inactive)
         local kind = byValue[a] or tostring(a)
-        fire(kind, b ~= 0)
-    elseif event == "PLAYER_REGEN_DISABLED" then
-        fire("Combat", true)
-    elseif event == "PLAYER_REGEN_ENABLED" then
-        fire("Combat", false)
+        if kind == "Combat" then combatChanged() else fire(kind, b ~= 0) end
+    elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
+        combatChanged()
     end
 end)
