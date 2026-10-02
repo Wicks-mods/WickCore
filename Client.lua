@@ -63,6 +63,10 @@ Client.hasObjectiveTracker = rawget(_G, "ObjectiveTrackerFrame") ~= nil
 -- but its tooltips never run the post calls (probed 2026-10-02); the tooltip
 -- info API is the sign the data path is wired.
 Client.hasTooltipData      = (rawget(_G, "C_TooltipInfo") and C_TooltipInfo.GetHyperlink) and true or false
+-- The game's windows are the old Classic kind: textures laid round a frame
+-- instead of the portrait template's NineSlice. CharacterFrame is up on
+-- every client at load and is the generation's clearest witness.
+Client.classicWindows      = rawget(_G, "CharacterFrame") ~= nil and CharacterFrame.NineSlice == nil
 
 function Client:GameMode()
     local GR = rawget(_G, "C_GameRules")
