@@ -59,6 +59,10 @@ Client.hasAuraContainer    = hasTemplate("CustomAuraContainerTemplate")   -- the
 Client.hasPing             = hasTemplate("PingableUnitFrameTemplate")
 Client.hasBossFrames       = rawget(_G, "BossTargetFrameContainer") ~= nil
 Client.hasObjectiveTracker = rawget(_G, "ObjectiveTrackerFrame") ~= nil
+-- Tooltips that carry a data table. TBC Anniversary has TooltipDataProcessor
+-- but its tooltips never run the post calls (probed 2026-10-02); the tooltip
+-- info API is the sign the data path is wired.
+Client.hasTooltipData      = (rawget(_G, "C_TooltipInfo") and C_TooltipInfo.GetHyperlink) and true or false
 
 function Client:GameMode()
     local GR = rawget(_G, "C_GameRules")
