@@ -1,9 +1,15 @@
 -- WickCore
 -- Chrome.lua — the Wick visual system, built once.
 --
--- Locked palette, flat panels, single 1px muted-purple border, fel-green
--- L-bracket corners with 10px arms 2px thick flush to the corners. Products
--- call Chrome:NewPanel and get all of it; they never draw their own frame.
+-- The locked palette, drawn in the look the player picks (Chrome.Styles).
+-- Each look belongs to a family: "og" draws flat panels with a border line,
+-- and Wick OG, its reference, adds the single 1px muted-purple border and
+-- fel-green L-bracket corners with 10px arms 2px thick flush to the corners;
+-- "modern" draws 9-sliced glass panels with a ring in place of the border,
+-- and Wick Modern, its reference, rounds them and lifts them on a soft
+-- shadow. Products call Chrome:NewPanel and the controls here and get the
+-- look in use; they take colours by reference from Chrome.Colors and never
+-- draw their own frame.
 
 local ADDON = ...
 local Core = LibStub("WickCore-1.0", true)
@@ -170,9 +176,10 @@ end
 --   statusbar    the bar texture the look draws in, where the player has
 --                left the bar texture on the default
 --
--- The choice is each character's own (a new character starts on Wick
--- Modern), read from the saved variable directly, as the theme is, and
--- changing it takes a reload: panels are built once.
+-- The choice is each character's own (a new character starts on
+-- Chrome.DEFAULT_STYLE: Wick OG on TBC, Wick Modern on Forever), read from
+-- the saved variable directly, as the theme is, and changing it takes a
+-- reload: panels are built once.
 local MEDIA = "Interface\\AddOns\\WickCore\\Media\\"
 local TEX = MEDIA .. "Textures\\"
 local FONTS = MEDIA .. "Fonts\\"
@@ -345,11 +352,19 @@ function Chrome:SetStyle(style)
     if not c then return end
     c.style = self.StyleByID[style] and style or "modern"
     -- A look comes with its own colours; they are chosen with it, and can
-    -- be changed afterwards like any theme. Wick Modern and Wick OG keep
-    -- whatever theme is in use.
+    -- be changed afterwards like any theme. Wick Modern and Wick OG draw in
+    -- the Wick palette and keep whatever theme is in use, unless that is
+    -- another look's own palette: then the Wick theme from before that look
+    -- comes back, or the client's default (Fel on TBC, the class on Forever).
     local st = self.StyleByID[style]
-    if st and st.palette and self.SetTheme and (st.palette == "auto" or (self.ThemeByID and self.ThemeByID[st.palette])) then
-        self:SetTheme(st.palette)
+    if st and st.palette and self.SetTheme and self.ThemeByID then
+        local current = self.ThemeByID[self:ResolveTheme(self:ThemeSetting())]
+        if st.palette == "auto" then
+            if current and current.look then self:SetTheme(c.wickTheme or self.DEFAULT_SETTING) end
+        elseif self.ThemeByID[st.palette] then
+            if not (current and current.look) then c.wickTheme = self:ThemeSetting() end
+            self:SetTheme(st.palette)
+        end
     end
     if Core.Store then Core.Store:Dirty() end
 end

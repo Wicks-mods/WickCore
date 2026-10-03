@@ -1,5 +1,15 @@
 # WickCore - Changelog
 
+## 0.11.1 (unreleased)
+
+### Fixed
+
+- Picking Wick Modern or Wick OG keeps the theme you have. It had been
+  switching you to your class theme, so on TBC a try of Wick Modern and a
+  return to Wick OG left you on your class colour instead of Fel. Coming
+  back from a look with its own colours (Rebel, Crisp and the rest) gives
+  you the Wick theme you had before that look.
+
 ## 0.11.0 (2026-10-03)
 
 ### Added

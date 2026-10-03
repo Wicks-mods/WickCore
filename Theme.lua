@@ -1,10 +1,11 @@
 -- WickCore
 -- Theme.lua — palette switching for the Wick chrome.
 --
--- The chrome never changes shape: flat panels, one 1px border, L-bracket
--- corners, two-tone titles. What a theme changes is the five colors those
--- are drawn in. Fel is the brand and the default; it is also the warlock
--- theme. The other eight themes take their accent from the client's own
+-- A theme never changes shape; the look does that (Chrome.Styles in
+-- Chrome.lua). What a theme changes is the five colors the look is drawn
+-- in. Fel is the brand, the default on TBC, and the warlock theme; Forever
+-- defaults to the player's class theme. Looks other than Wick Modern and
+-- Wick OG bring palettes of their own, kept here as themes marked `look`. The other eight themes take their accent from the client's own
 -- class color table (RAID_CLASS_COLORS, C_ClassColor on retail) so they
 -- match what the game paints in raid frames and chat, and sit on deep
 -- companion darks the way Fel's green sits on the brand's purple.
