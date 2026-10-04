@@ -3,7 +3,7 @@
 
 > The shared platform under every Wick addon for World of Warcraft: Forever.
 
-Part of the **[Wick suite](https://github.com/Wicksmods/WickSuite)**. WickCore is
+Part of the **[Wick suite](https://github.com/Wicks-mods/WickSuite)**. WickCore is
 a library, not a player-facing addon. It carries the brand chrome and every
 table-stakes capability so no product builds its own: profiles, one options
 panel, import and export strings, a launcher, localization, version broadcast,
@@ -97,4 +97,4 @@ python WickSuite/tools/core-harness/run.py --legacy   # TBC-shaped stub client
 
 MIT with a trademark carve-out for the Wick name, logomark and visual system.
 LibStub is public domain. Full policy:
-[WickSuite/TRADEMARK.md](https://github.com/Wicksmods/WickSuite/blob/main/TRADEMARK.md).
+[WickSuite/TRADEMARK.md](https://github.com/Wicks-mods/WickSuite/blob/main/TRADEMARK.md).
