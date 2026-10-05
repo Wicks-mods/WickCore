@@ -4,6 +4,11 @@
 
 ### Fixed
 
+- Every Wick addon shows up as a broker feed (LibDataBroker) when a
+  broker library is installed, including the one Wick's UI brings for
+  its info panels. WickCore looked for the library once, as it loaded,
+  before any addon that brings one, so none of the launchers were ever
+  published and none could go in a broker slot.
 - Picking Wick Modern or Wick OG keeps the theme you have. It had been
   switching you to your class theme, so on TBC a try of Wick Modern and a
   return to Wick OG left you on your class colour instead of Fel. Coming

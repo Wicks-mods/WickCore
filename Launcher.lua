@@ -14,7 +14,44 @@ Core.Launcher = Launcher
 Launcher.entries = Launcher.entries or {}
 
 local Chrome = Core.Chrome
-local LDB = LibStub("LibDataBroker-1.1", true)
+
+-- The broker library is looked for when it is needed, not once as this
+-- file loads: WickCore loads first, and the copy a player has may come
+-- with an addon that loads after it (Wick's UI bundles one for its info
+-- panels). Asked once at load, every Wick launcher went unpublished and
+-- none could go in a broker slot.
+local function broker() return LibStub("LibDataBroker-1.1", true) end
+
+local function publish(entry)
+    if entry.ldb then return end
+    local LDB = broker()
+    if not LDB then return end
+    local addon, opts = entry.addon, entry.opts
+    local ok, obj = pcall(LDB.NewDataObject, LDB, addon.title, {
+        type = "launcher",
+        icon = opts.icon or Launcher.ICON,
+        label = addon.title,
+        text = opts.text,
+        OnClick = function(_, button)
+            if opts.onClick then Core.safe(opts.onClick, addon, button)
+            elseif addon.Toggle then Core.safe(addon.Toggle, addon) end
+        end,
+        OnTooltipShow = function(tt)
+            if opts.tooltip then Core.safe(opts.tooltip, tt, addon)
+            else tt:AddLine(Chrome:TitleMarkup(addon.title)) end
+        end,
+    })
+    if ok and obj then entry.ldb = obj end
+end
+
+-- Launchers registered before a broker library loaded get their feed once
+-- every addon is in.
+function Launcher:PublishBrokers()
+    for _, entry in pairs(self.entries) do publish(entry) end
+end
+local publisher = CreateFrame("Frame")
+publisher:RegisterEvent("PLAYER_LOGIN")
+publisher:SetScript("OnEvent", function() Launcher:PublishBrokers() end)
 
 Launcher.ICON = "Interface\\Icons\\INV_Misc_Candle_03"
 
@@ -24,23 +61,7 @@ function Launcher:Register(addon, opts)
     local entry = { addon = addon, opts = opts }
     self.entries[addon.name] = entry
 
-    if LDB then
-        local ok, obj = pcall(LDB.NewDataObject, LDB, addon.title, {
-            type = "launcher",
-            icon = opts.icon or self.ICON,
-            label = addon.title,
-            text = opts.text,
-            OnClick = function(_, button)
-                if opts.onClick then Core.safe(opts.onClick, addon, button)
-                elseif addon.Toggle then Core.safe(addon.Toggle, addon) end
-            end,
-            OnTooltipShow = function(tt)
-                if opts.tooltip then Core.safe(opts.tooltip, tt, addon)
-                else tt:AddLine(Chrome:TitleMarkup(addon.title)) end
-            end,
-        })
-        if ok then entry.ldb = obj end
-    end
+    publish(entry)
 
     self:EnsureMinimapButton()
     return entry
