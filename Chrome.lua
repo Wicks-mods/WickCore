@@ -510,6 +510,82 @@ function Chrome:FitGameArt(button)
     return fit
 end
 
+-- ============================================================
+-- Classic: the game's art for a product's own controls
+-- ============================================================
+-- For products that draw their own controls (a bag's options, a list's
+-- fields): the game's art laid on them in Classic, the same on every
+-- client under the same names.
+
+-- An input box's ends and stretched middle (InputBoxTemplate's art). The
+-- left end reaches inset past the frame, as the game's does.
+local INPUT = "Interface\\Common\\Common-Input-Border"
+function Chrome:GameInputArt(f, inset)
+    inset = inset or 0
+    local l = f:CreateTexture(nil, "BACKGROUND")
+    l:SetTexture(INPUT)
+    l:SetTexCoord(0, 0.0625, 0, 0.625)
+    l:SetPoint("TOPLEFT", -inset, 0)
+    l:SetPoint("BOTTOMLEFT", -inset, 0)
+    l:SetWidth(8)
+    local r = f:CreateTexture(nil, "BACKGROUND")
+    r:SetTexture(INPUT)
+    r:SetTexCoord(0.9375, 1, 0, 0.625)
+    r:SetPoint("TOPRIGHT", 0, 0)
+    r:SetPoint("BOTTOMRIGHT", 0, 0)
+    r:SetWidth(8)
+    local m = f:CreateTexture(nil, "BACKGROUND")
+    m:SetTexture(INPUT)
+    m:SetTexCoord(0.0625, 0.9375, 0, 0.625)
+    m:SetPoint("TOPLEFT", l, "TOPRIGHT")
+    m:SetPoint("BOTTOMRIGHT", r, "BOTTOMLEFT")
+    return l, m, r
+end
+
+-- A check box's box, tick and hover glow, filling box. Returns the tick
+-- (shown when checked) and the glow (shown on hover).
+function Chrome:GameCheckArt(box)
+    local up = box:CreateTexture(nil, "BACKGROUND")
+    up:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
+    up:SetAllPoints()
+    local tick = box:CreateTexture(nil, "ARTWORK")
+    tick:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    tick:SetAllPoints()
+    local glow = box:CreateTexture(nil, "OVERLAY")
+    glow:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+    glow:SetBlendMode("ADD")
+    glow:SetAllPoints()
+    glow:Hide()
+    return tick, glow
+end
+
+-- A slider's groove (on a frame made with BackdropTemplate) and its knob.
+Chrome.GAME_SLIDER_BACKDROP = {
+    bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+    edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+    tile = true, tileSize = 8, edgeSize = 8,
+    insets = { left = 3, right = 3, top = 6, bottom = 6 },
+}
+Chrome.GAME_SLIDER_KNOB = "Interface\\Buttons\\UI-SliderBar-Button-Horizontal"
+
+-- The game's close button, in place of a product's own. It is laid over
+-- the old one, which stays where it was (other controls are anchored to
+-- it) but unseen, and a click on the new one is the old one's click.
+function Chrome:GameClose(old, window)
+    if not (old and window) then return old end
+    local ok, made = pcall(CreateFrame, "Button", nil, window, "UIPanelCloseButtonDefaultAnchors")
+    if not (ok and made) then return old end
+    if made:GetNumPoints() == 0 then made:SetPoint("TOPRIGHT", window, "TOPRIGHT", 4, 4) end
+    made:SetFrameLevel(math.max(window:GetFrameLevel(), old:GetFrameLevel()) + 4)
+    made:SetScript("OnClick", function(_, ...)
+        local fn = old:GetScript("OnClick")
+        if fn then fn(old, ...) end
+    end)
+    old:SetAlpha(0)
+    old:EnableMouse(false)
+    return made
+end
+
 -- Too small for one of the game's borders, whose corners alone are
 -- several pixels: a tile, or a strip. Not sized yet counts as a panel.
 function Chrome:GameSmall(f)
