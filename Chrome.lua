@@ -372,12 +372,14 @@ local PIECES = { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomR
 -- One of the game's own borders round f, from its layout of that name
 -- (TooltipDefaultLayout unless told), so each client draws its own art.
 -- The layout's middle is left out: the frame's own fill, in the palette,
--- is the middle. Its offsets are left out too: the game's window layouts
--- push their corners past the frame (8 px out on the left and 16 above,
--- on Forever) to frame its own templates, which on ours made the art
--- stand out past the panel's sides and its ends uneven. Ours lies on the
--- panel's edge, corners in its corners. Drawn on a child frame, so
--- nothing is written onto f.
+-- is the middle. Its sideways offsets and its bottom ones are left out
+-- too: the game's window layouts push their corners past the frame (8 px
+-- out on the left and down at the bottom, on Forever), which on ours made
+-- the art stand out past the panel's sides and left a gap under it. Ours
+-- lies on the panel's sides and bottom. The top corners keep their lift:
+-- the window's crest sits above the frame, as on the game's own windows,
+-- so its title band falls behind the panel's title row. Drawn on a child
+-- frame, so nothing is written onto f.
 -- Returns the child, or nil where the client has no such layout (the
 -- offline stub), and the caller draws its flat border instead.
 function Chrome:GameBorder(f, layoutName)
@@ -388,9 +390,11 @@ function Chrome:GameBorder(f, layoutName)
     for k, v in pairs(layout) do
         if k ~= "Center" then
             if type(v) == "table" then
+                local top = k == "TopLeftCorner" or k == "TopRightCorner"
                 local piece = {}
                 for pk, pv in pairs(v) do
-                    if pk ~= "x" and pk ~= "y" and pk ~= "x1" and pk ~= "y1" then piece[pk] = pv end
+                    local keep = (pk ~= "x" and pk ~= "x1" and pk ~= "y" and pk ~= "y1") or (top and pk == "y")
+                    if keep then piece[pk] = pv end
                 end
                 copy[k] = piece
             else
