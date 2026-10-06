@@ -372,14 +372,12 @@ local PIECES = { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomR
 -- One of the game's own borders round f, from its layout of that name
 -- (TooltipDefaultLayout unless told), so each client draws its own art.
 -- The layout's middle is left out: the frame's own fill, in the palette,
--- is the middle. Its sideways offsets and its bottom ones are left out
--- too: the game's window layouts push their corners past the frame (8 px
--- out on the left and down at the bottom, on Forever), which on ours made
--- the art stand out past the panel's sides and left a gap under it. Ours
--- lies on the panel's sides and bottom. The top corners keep their lift:
--- the window's crest sits above the frame, as on the game's own windows,
--- so its title band falls behind the panel's title row. Drawn on a child
--- frame, so nothing is written onto f.
+-- is the middle. The layout's offsets stay: the game's art carries
+-- clear space round its metal, and the offsets are what put the metal on
+-- a window's edge (drawn flush, the metal sat a few pixels inside the
+-- panel and the panel's own fill showed round it as a dark band). A
+-- window's own fill is put away instead (AddBorder), so the frame is the
+-- window's only edge. Drawn on a child frame, so nothing is written onto f.
 -- Returns the child, or nil where the client has no such layout (the
 -- offline stub), and the caller draws its flat border instead.
 function Chrome:GameBorder(f, layoutName)
@@ -387,21 +385,7 @@ function Chrome:GameBorder(f, layoutName)
     local layout = NSU and NSU.GetLayout and NSU.GetLayout(layoutName or "TooltipDefaultLayout")
     if type(layout) ~= "table" or not NSU.ApplyLayout then return nil end
     local copy = {}
-    for k, v in pairs(layout) do
-        if k ~= "Center" then
-            if type(v) == "table" then
-                local top = k == "TopLeftCorner" or k == "TopRightCorner"
-                local piece = {}
-                for pk, pv in pairs(v) do
-                    local keep = (pk ~= "x" and pk ~= "x1" and pk ~= "y" and pk ~= "y1") or (top and pk == "y")
-                    if keep then piece[pk] = pv end
-                end
-                copy[k] = piece
-            else
-                copy[k] = v
-            end
-        end
-    end
+    for k, v in pairs(layout) do if k ~= "Center" then copy[k] = v end end
     local holder = CreateFrame("Frame", nil, f)
     holder:SetAllPoints()
     if not pcall(NSU.ApplyLayout, holder, copy) then
@@ -436,13 +420,12 @@ function Chrome:GameWindowBackground(f)
     local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
     bg:SetTexture("Interface\\FrameGeneral\\UI-Background-Rock", "REPEAT", "REPEAT")
     if bg.SetHorizTile then bg:SetHorizTile(true); bg:SetVertTile(true) end
-    -- Inside the frame, which now lies on the panel's edge all round.
-    bg:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -21)
-    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -3, 3)
+    bg:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
+    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
     local streaks = f:CreateTexture(nil, "BACKGROUND", nil, 3)
     if pcall(streaks.SetAtlas, streaks, "_UI-Frame-TopTileStreaks", true) then
-        streaks:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -21)
-        streaks:SetPoint("TOPRIGHT", f, "TOPRIGHT", -3, -21)
+        streaks:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
+        streaks:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -21)
     else
         streaks:Hide()
     end
@@ -597,6 +580,20 @@ function Chrome:GameSmall(f)
     local w, h = f:GetSize()
     if not (w and h and w > 0 and h > 0) then return false end
     return (w <= 64 and h <= 64) or w < 18 or h < 18
+end
+
+-- A frame's own full-size fill in a palette colour (the background a
+-- product painted with Chrome:Texture), made see-through.
+function Chrome:HideFill(f)
+    local fw, fh = f:GetSize()
+    for _, r in ipairs({ f:GetRegions() }) do
+        local info = r.GetObjectType and r:GetObjectType() == "Texture" and tinted[r]
+        if info and r:GetDrawLayer() == "BACKGROUND" then
+            local w, h = r:GetSize()
+            local full = (r:GetNumPoints() >= 2) or (fw and w and fh and h and w >= fw - 2 and h >= fh - 2)
+            if full then r:SetAlpha(0) end
+        end
+    end
 end
 
 -- A game border recoloured: white is the art as the game draws it.
@@ -934,6 +931,10 @@ function Chrome:AddBorder(f, color)
             -- header, its sections), over its fill.
             holder:SetFrameLevel(f:GetFrameLevel())
             f.gameWindowBG = self:GameWindowBackground(f)
+            -- The window's own fill goes: the game's frame and rock are
+            -- its edge and its ground, and a fill showing past them would
+            -- draw a second edge.
+            self:HideFill(f)
         elseif holder and inset then
             holder:SetFrameLevel(f:GetFrameLevel())
             f.gameInsetBG = self:GameInsetBackground(f)
