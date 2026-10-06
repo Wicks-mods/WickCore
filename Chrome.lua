@@ -372,7 +372,12 @@ local PIECES = { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomR
 -- One of the game's own borders round f, from its layout of that name
 -- (TooltipDefaultLayout unless told), so each client draws its own art.
 -- The layout's middle is left out: the frame's own fill, in the palette,
--- is the middle. Drawn on a child frame, so nothing is written onto f.
+-- is the middle. Its offsets are left out too: the game's window layouts
+-- push their corners past the frame (8 px out on the left and 16 above,
+-- on Forever) to frame its own templates, which on ours made the art
+-- stand out past the panel's sides and its ends uneven. Ours lies on the
+-- panel's edge, corners in its corners. Drawn on a child frame, so
+-- nothing is written onto f.
 -- Returns the child, or nil where the client has no such layout (the
 -- offline stub), and the caller draws its flat border instead.
 function Chrome:GameBorder(f, layoutName)
@@ -380,7 +385,19 @@ function Chrome:GameBorder(f, layoutName)
     local layout = NSU and NSU.GetLayout and NSU.GetLayout(layoutName or "TooltipDefaultLayout")
     if type(layout) ~= "table" or not NSU.ApplyLayout then return nil end
     local copy = {}
-    for k, v in pairs(layout) do if k ~= "Center" then copy[k] = v end end
+    for k, v in pairs(layout) do
+        if k ~= "Center" then
+            if type(v) == "table" then
+                local piece = {}
+                for pk, pv in pairs(v) do
+                    if pk ~= "x" and pk ~= "y" and pk ~= "x1" and pk ~= "y1" then piece[pk] = pv end
+                end
+                copy[k] = piece
+            else
+                copy[k] = v
+            end
+        end
+    end
     local holder = CreateFrame("Frame", nil, f)
     holder:SetAllPoints()
     if not pcall(NSU.ApplyLayout, holder, copy) then
@@ -415,12 +432,13 @@ function Chrome:GameWindowBackground(f)
     local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
     bg:SetTexture("Interface\\FrameGeneral\\UI-Background-Rock", "REPEAT", "REPEAT")
     if bg.SetHorizTile then bg:SetHorizTile(true); bg:SetVertTile(true) end
-    bg:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
-    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
+    -- Inside the frame, which now lies on the panel's edge all round.
+    bg:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -21)
+    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -3, 3)
     local streaks = f:CreateTexture(nil, "BACKGROUND", nil, 3)
     if pcall(streaks.SetAtlas, streaks, "_UI-Frame-TopTileStreaks", true) then
-        streaks:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
-        streaks:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -21)
+        streaks:SetPoint("TOPLEFT", f, "TOPLEFT", 3, -21)
+        streaks:SetPoint("TOPRIGHT", f, "TOPRIGHT", -3, -21)
     else
         streaks:Hide()
     end
