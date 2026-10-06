@@ -1,5 +1,16 @@
 # WickCore - Changelog
 
+## 0.12.0 (unreleased)
+
+### Added
+
+- Classic, a look in the game's own art: its window frames, title bars
+  and close buttons, its tooltip border round panels, its buttons and
+  check boxes, its font and gold. The art comes from the client, so on
+  TBC Anniversary it is that client's and on Forever Forever's. Every
+  Wick addon follows it, for players who want what the suite does
+  without a look of its own.
+
 ## 0.11.1 (2026-10-05)
 
 ### Fixed

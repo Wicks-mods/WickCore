@@ -55,6 +55,9 @@ local LOOK_PALETTES = {
     -- Neutral darks under the player's own class colour: the accent is
     -- the class, the rest stays grey, so it reads the same on every class.
     { id = "crisp",     name = "Crisp",     fel = "class",  void = "121212", shadow = "0A0A0A", border = "000000", text = "F0F0F0" },
+    -- The game's own colours: its gold for headings and the accent, white
+    -- text, and the dark blue of its tooltips for the panels.
+    { id = "classic",   name = "Classic",   fel = "FFD100", void = "171730", shadow = "0E0E1C", border = "5A5A66", text = "FFFFFF" },
 }
 local CLASS_ORDER = { "SHAMAN", "DRUID", "HUNTER", "MAGE", "PRIEST", "PALADIN", "ROGUE", "WARRIOR" }
 

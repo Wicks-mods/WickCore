@@ -143,6 +143,11 @@ end
 --   lift         the lift's colour token (nil for black) and alpha
 --   ringRest     a ring shown at rest in the border's place: token, alpha
 --   corners      og: "brackets" or "none"
+--   game         og: the game's own art in place of ours where the client
+--                has some (Classic): its window frame, title bar and close
+--                button, its tooltip border round panels, its buttons and
+--                check boxes. Read from the client as they are drawn, so
+--                each client looks like itself.
 --   edge         og: the black pixel outside the border
 --   font         the Chrome font; uiFont, when set, is also what Wick's
 --                UI's "Wick" font draws in, uiBump added to its sizes
@@ -300,6 +305,15 @@ Chrome.Styles = {
       blurb = "Clean cut: see-through dark grey, one black pixel round everything, square corners, your class colour as the accent.",
       font = PT_SANS, bump = modernBump, textShadow = true, textOutline = "OUTLINE",
       corners = "none", edge = false, borderPx = 1, glass = 0.85 },
+    -- The game's own: its window frames, borders, buttons and fonts, for
+    -- players who want what the suite does without a look of its own. The
+    -- art is the client's, so on TBC Anniversary it is that client's and on
+    -- Forever Forever's. The flat family underneath, for whatever the game
+    -- has nothing of its own for.
+    { id = "classic", name = "Classic", family = "og", palette = "classic", game = true,
+      blurb = "The game's own look: its window frames, borders, buttons and fonts, so everything sits in with the rest of the interface.",
+      font = FRIZ, textShadow = true, corners = "none", edge = false, borderPx = 1,
+      statusbar = "Interface\\TargetingFrame\\UI-StatusBar" },
 }
 Chrome.StyleByID = {}
 for _, st in ipairs(Chrome.Styles) do Chrome.StyleByID[st.id] = st end
@@ -346,6 +360,59 @@ function Chrome:StyleID() return self:StyleDef().id end
 function Chrome:Style() return self:StyleDef().family end
 
 function Chrome:Modern() return self:Style() == "modern" end
+
+-- The game's own art in place of ours (Classic).
+function Chrome:Game() return self:StyleDef().game == true end
+
+-- The pieces of one of the game's frame borders, by the names its
+-- nine-slice layouts give them.
+local PIECES = { "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner",
+    "TopEdge", "BottomEdge", "LeftEdge", "RightEdge" }
+
+-- One of the game's own borders round f, from its layout of that name
+-- (TooltipDefaultLayout unless told), so each client draws its own art.
+-- The layout's middle is left out: the frame's own fill, in the palette,
+-- is the middle. Drawn on a child frame, so nothing is written onto f.
+-- Returns the child, or nil where the client has no such layout (the
+-- offline stub), and the caller draws its flat border instead.
+function Chrome:GameBorder(f, layoutName)
+    local NSU = rawget(_G, "NineSliceUtil")
+    local layout = NSU and NSU.GetLayout and NSU.GetLayout(layoutName or "TooltipDefaultLayout")
+    if type(layout) ~= "table" or not NSU.ApplyLayout then return nil end
+    local copy = {}
+    for k, v in pairs(layout) do if k ~= "Center" then copy[k] = v end end
+    local holder = CreateFrame("Frame", nil, f)
+    holder:SetAllPoints()
+    if not pcall(NSU.ApplyLayout, holder, copy) then
+        holder:Hide()
+        return nil
+    end
+    holder.pieces = {}
+    for _, name in ipairs(PIECES) do
+        local t = rawget(holder, name)
+        if t then holder.pieces[#holder.pieces + 1] = t end
+    end
+    return holder
+end
+
+-- Too small for one of the game's borders, whose corners alone are
+-- several pixels: a tile, or a strip. Not sized yet counts as a panel.
+function Chrome:GameSmall(f)
+    if not (f and f.GetSize) then return false end
+    local w, h = f:GetSize()
+    if not (w and h and w > 0 and h > 0) then return false end
+    return (w <= 64 and h <= 64) or w < 18 or h < 18
+end
+
+-- A game border recoloured: white is the art as the game draws it.
+function Chrome:TintGameBorder(holder, r, g, b, a)
+    for _, t in ipairs(holder and holder.pieces or {}) do t:SetVertexColor(r, g, b, a or 1) end
+end
+
+-- Something products can recolour, as they recolour a border's edges,
+-- that changes nothing: the game's own frames have no line to colour.
+local NOOP = setmetatable({}, { __index = function() return function() end end })
+local function noBorder() return { top = NOOP, bottom = NOOP, left = NOOP, right = NOOP } end
 
 function Chrome:SetStyle(style)
     local c = self:CharStore()
@@ -660,6 +727,25 @@ function Chrome:AddBorder(f, color)
         f.border = { top = proxy, bottom = proxy, left = proxy, right = proxy }
         return
     end
+    -- Classic: the game's tooltip border round anything bigger than a tile,
+    -- in the art's own colour at rest. A product that colours its border
+    -- for hover or selection tints the art instead.
+    if self:Game() and not self:GameSmall(f) then
+        local holder = self:GameBorder(f)
+        if holder then
+            local function paint(_, r, g, b, a)
+                local c = C.border
+                if near(r, c[1]) and near(g, c[2]) and near(b, c[3]) then r, g, b, a = 1, 1, 1, 1 end
+                Chrome:TintGameBorder(holder, r, g, b, a)
+            end
+            local proxy = setmetatable({ SetColorTexture = paint, SetVertexColor = paint },
+                { __index = function() return function() end end })
+            proxy:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
+            f.gameBorder = holder
+            f.border = { top = proxy, bottom = proxy, left = proxy, right = proxy }
+            return
+        end
+    end
     local px = self:StyleDef().borderPx or 1
     local top    = self:Texture(f, "BORDER", color); top:SetPoint("TOPLEFT");    top:SetPoint("TOPRIGHT");    top:SetHeight(px)
     local bot    = self:Texture(f, "BORDER", color); bot:SetPoint("BOTTOMLEFT"); bot:SetPoint("BOTTOMRIGHT"); bot:SetHeight(px)
@@ -693,6 +779,8 @@ end
 
 -- Two-tone title: "Wick's" in text color, the noun in fel green.
 function Chrome:TitleMarkup(title)
+    -- Classic: the whole title in the accent, as the game writes its own.
+    if self:Game() then return "|cff" .. self.Hex.fel .. tostring(title) .. "|r" end
     local pre, noun = tostring(title):match("^(Wick'?s?)%s+(.+)$")
     if pre then
         return "|cff" .. self.Hex.text .. pre .. "|r |cff" .. self.Hex.fel .. noun .. "|r"
@@ -740,7 +828,16 @@ end
 
 function Chrome:NewPanel(name, o)
     o = o or {}
-    local f = CreateFrame("Frame", name, o.parent or UIParent)
+    -- Classic: the template the client makes its own plain windows from,
+    -- with its frame, title bar and background (DefaultPanelTemplate, on
+    -- both clients). Where it cannot be made, the flat panel.
+    local game = self:Game() and rawget(_G, "NineSliceUtil") ~= nil
+    local f
+    if game then
+        local ok, made = pcall(CreateFrame, "Frame", name, o.parent or UIParent, "DefaultPanelTemplate")
+        if ok and made then f = made else game = false end
+    end
+    f = f or CreateFrame("Frame", name, o.parent or UIParent)
     f:SetSize(o.width or 400, o.height or 240)
     -- Whether the player can change the size, which is what decides
     -- whether a saved size is theirs or a stale copy of ours.
@@ -760,8 +857,15 @@ function Chrome:NewPanel(name, o)
 
     local modern = self:Modern()
     f.wickPanel = true
+    f.wickGame = game or nil
     local bg
-    if modern then
+    if game then
+        -- The template's own background; a product that recolours f.bg or
+        -- f.border finds them, and changes nothing of the game's art.
+        bg = rawget(f, "Bg")
+        if not bg then bg = self:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints() end
+        f.border = noBorder()
+    elseif modern then
         -- Rounded glass on a soft lift; the border is the ring stand-in.
         bg = self:Glass(f, "BACKGROUND", C.void, 0.95, -7)
         bg:SetAllPoints()
@@ -775,7 +879,7 @@ function Chrome:NewPanel(name, o)
         self:AddBorder(f)
     end
     f.bg = bg
-    Chrome:PanelExtras(f)
+    if not game then Chrome:PanelExtras(f) end
 
     -- Header strip: a band in the original style; in the modern one the
     -- title sits on the glass, with only a faint rule under it.
@@ -791,18 +895,41 @@ function Chrome:NewPanel(name, o)
     sep:SetPoint("TOPRIGHT", modern and -7 or -1, -H - 1)
     sep:SetHeight(1)
     if modern then header:Hide(); sep:SetAlpha(0.5) end
+    -- Classic: the template's title bar is the header; ours is kept, unseen,
+    -- for products that place things against it.
+    if game then header:SetAlpha(0); sep:Hide() end
     f.header = header
 
-    f.title = self:Text(f, 12, nil, nil, true)
-    f.title:SetPoint("LEFT", f, "TOPLEFT", 10, -H / 2)
+    local gameTitle = game and rawget(f, "TitleContainer") and rawget(f.TitleContainer, "TitleText")
+    if gameTitle then
+        f.title = gameTitle
+    else
+        f.title = self:Text(f, 12, nil, nil, true)
+        f.title:SetPoint("LEFT", f, "TOPLEFT", 10, -H / 2)
+    end
     f.title:SetText(self:TitleMarkup(o.title or name))
 
     -- Close glyph
     if o.closable ~= false then
-        local close = CreateFrame("Button", nil, f)
-        close:SetSize(H, H)
-        close:SetPoint("TOPRIGHT", -1, -1)
-        if modern then
+        local close
+        if game then
+            -- The game's close button, placed where its windows have it.
+            -- Its own click goes through the game's panel manager; ours
+            -- only hides this window.
+            local ok, made = pcall(CreateFrame, "Button", nil, f, "UIPanelCloseButtonDefaultAnchors")
+            if ok and made then
+                close = made
+                if close:GetNumPoints() == 0 then close:SetPoint("TOPRIGHT", f, "TOPRIGHT", 4, 4) end
+            end
+        end
+        if not close then
+            close = CreateFrame("Button", nil, f)
+            close:SetSize(H, H)
+            close:SetPoint("TOPRIGHT", -1, -1)
+        end
+        if game and close:GetNormalTexture() then
+            -- Drawn by its template.
+        elseif modern then
             -- Our flat close mark; the accent copy shows on the highlight
             -- layer by itself.
             local x = close:CreateTexture(nil, "OVERLAY")
@@ -831,10 +958,15 @@ function Chrome:NewPanel(name, o)
         Chrome:CloseOnEscape(f)
     end
 
-    -- Content inset
+    -- Content inset: inside the game's frame edges in Classic.
     local content = CreateFrame("Frame", nil, f)
-    content:SetPoint("TOPLEFT", 8, -H - 8)
-    content:SetPoint("BOTTOMRIGHT", -8, 8)
+    if game then
+        content:SetPoint("TOPLEFT", 14, -H - 10)
+        content:SetPoint("BOTTOMRIGHT", -10, 10)
+    else
+        content:SetPoint("TOPLEFT", 8, -H - 8)
+        content:SetPoint("BOTTOMRIGHT", -8, 8)
+    end
     f.content = content
 
     -- Resize grip doubles as the BOTTOMRIGHT bracket
@@ -1086,6 +1218,18 @@ function Chrome:ReloadButton(parent, text, width, height, before)
 end
 
 function Chrome:Button(parent, text, width, height, template)
+    if self:Game() and not template then
+        -- The game's red button, gold label and all.
+        local ok, gb = pcall(CreateFrame, "Button", nil, parent, "UIPanelButtonTemplate")
+        if ok and gb and gb.GetFontString then
+            gb:SetSize(width or 90, height or 22)
+            gb:SetText(text)
+            gb.label = gb:GetFontString()
+            if gb.label then gb.label:SetPoint("CENTER") end
+            gb.border = noBorder()
+            return gb
+        end
+    end
     local b = CreateFrame("Button", nil, parent, template)
     b:SetSize(width or 90, height or 22)
     if self:Modern() then
@@ -1122,7 +1266,24 @@ function Chrome:Check(parent, label, get, set)
     box:SetSize(14, 14)
     box:SetPoint("LEFT", 0, 0)
     local fill
-    if self:Modern() then
+    if self:Game() then
+        -- The game's check box: its box, its tick, its hover glow.
+        box:SetSize(22, 22)
+        local up = box:CreateTexture(nil, "BACKGROUND")
+        up:SetTexture("Interface\\Buttons\\UI-CheckBox-Up")
+        up:SetAllPoints()
+        local hl = box:CreateTexture(nil, "OVERLAY")
+        hl:SetTexture("Interface\\Buttons\\UI-CheckBox-Highlight")
+        hl:SetBlendMode("ADD")
+        hl:SetAllPoints()
+        fill = box:CreateTexture(nil, "ARTWORK")
+        fill:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+        fill:SetAllPoints()
+        b:SetScript("OnEnter", function() hl:Show() end)
+        b:SetScript("OnLeave", function() hl:Hide() end)
+        hl:Hide()
+        box:SetPoint("LEFT", -3, 0)
+    elseif self:Modern() then
         local bbg = self:Glass(box, "BACKGROUND", C.shadow, 0.92); bbg:SetAllPoints()
         self:AddBorder(box)
         fill = self:Glass(box, "ARTWORK", C.fel, 1)
@@ -1131,11 +1292,13 @@ function Chrome:Check(parent, label, get, set)
         self:AddBorder(box)
         fill = self:Texture(box, "ARTWORK", C.fel)
     end
-    fill:SetPoint("TOPLEFT", 3, -3)
-    fill:SetPoint("BOTTOMRIGHT", -3, 3)
+    if not self:Game() then
+        fill:SetPoint("TOPLEFT", 3, -3)
+        fill:SetPoint("BOTTOMRIGHT", -3, 3)
+    end
     b.fill = fill
     b.label = self:Text(b, 11)
-    b.label:SetPoint("LEFT", box, "RIGHT", 8, 0)
+    b.label:SetPoint("LEFT", box, "RIGHT", self:Game() and 2 or 8, 0)
     b.label:SetText(label)
     local function refresh() if get() then fill:Show() else fill:Hide() end end
     b:SetScript("OnClick", function() set(not get()); refresh() end)
