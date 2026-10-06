@@ -427,6 +427,71 @@ function Chrome:GameWindowBackground(f)
     return bg
 end
 
+-- Inside one of the game's windows (ours, made in Classic): a panel there is
+-- one of the game's insets, its marble and recessed edge, as the game's own
+-- windows divide themselves, rather than a tooltip border.
+function Chrome:InGameWindow(f)
+    local p = f and f.GetParent and f:GetParent()
+    while p and p ~= UIParent do
+        if rawget(p, "gameWindowBG") or rawget(p, "wickGame") then return true end
+        p = p.GetParent and p:GetParent()
+    end
+    return false
+end
+
+-- The inset's marble, tiled, behind the panel's own contents.
+function Chrome:GameInsetBackground(f)
+    local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+    bg:SetTexture("Interface\\FrameGeneral\\UI-Background-Marble", "REPEAT", "REPEAT")
+    if bg.SetHorizTile then bg:SetHorizTile(true); bg:SetVertTile(true) end
+    bg:SetAllPoints(f)
+    return bg
+end
+
+-- The game's button templates draw their art for the template's own size
+-- (an action button 45 on Forever and 36 on TBC Anniversary, an item
+-- button 37), much of it at fixed sizes and offsets, so at any other size
+-- the frame runs past the button. Each piece is scaled with the button
+-- instead: its size and offsets, from what they were when the button was
+-- made, so call this before the button is given its own size. Text and the
+-- icon (which fills the button) are left alone.
+function Chrome:FitGameArt(button)
+    local w0, h0 = button:GetSize()
+    if not (w0 and h0 and w0 > 0 and h0 > 0) or rawget(button, "wickGameArt") then return end
+    local pieces, seen = {}, {}
+    local icon = rawget(button, "icon") or rawget(button, "Icon")
+    local function take(r)
+        if not r or seen[r] or r == icon then return end
+        seen[r] = true
+        if r.GetObjectType and r:GetObjectType() == "FontString" then return end
+        local n = r.GetNumPoints and r:GetNumPoints() or 0
+        if n == 0 then return end
+        local pts = {}
+        for i = 1, n do pts[i] = { r:GetPoint(i) } end
+        local w, h = r:GetSize()
+        pieces[#pieces + 1] = { r = r, pts = pts, w = w, h = h }
+    end
+    for _, r in ipairs({ button:GetRegions() }) do take(r) end
+    take(rawget(button, "IconMask"))
+    for _, c in ipairs({ button:GetChildren() }) do take(c) end
+    local function fit()
+        local w, h = button:GetSize()
+        if not (w and h and w > 0 and h > 0) then return end
+        local kx, ky = w / w0, h / h0
+        for _, p in ipairs(pieces) do
+            local r = p.r
+            r:ClearAllPoints()
+            for _, pt in ipairs(p.pts) do r:SetPoint(pt[1], pt[2], pt[3], (pt[4] or 0) * kx, (pt[5] or 0) * ky) end
+            -- One point: the piece has a size of its own, scaled too. Two
+            -- or more stretch it, and the size follows.
+            if #p.pts == 1 and p.w and p.w > 0 then r:SetSize(p.w * kx, p.h * ky) end
+        end
+    end
+    button.wickGameArt = fit
+    button:HookScript("OnSizeChanged", fit)
+    return fit
+end
+
 -- Too small for one of the game's borders, whose corners alone are
 -- several pixels: a tile, or a strip. Not sized yet counts as a panel.
 function Chrome:GameSmall(f)
@@ -764,12 +829,16 @@ function Chrome:AddBorder(f, color)
     -- for hover or selection tints the art instead.
     if self:Game() and not self:GameSmall(f) then
         local window = self:GameWindowish(f)
-        local holder = self:GameBorder(f, window and "ButtonFrameTemplateNoPortrait" or nil)
+        local inset = not window and self:InGameWindow(f)
+        local holder = self:GameBorder(f, (window and "ButtonFrameTemplateNoPortrait") or (inset and "InsetFrameTemplate") or nil)
         if holder and window then
             -- Under what the product puts on its own child frames (its
             -- header, its sections), over its fill.
             holder:SetFrameLevel(f:GetFrameLevel())
             f.gameWindowBG = self:GameWindowBackground(f)
+        elseif holder and inset then
+            holder:SetFrameLevel(f:GetFrameLevel())
+            f.gameInsetBG = self:GameInsetBackground(f)
         end
         if holder then
             local function paint(_, r, g, b, a)
