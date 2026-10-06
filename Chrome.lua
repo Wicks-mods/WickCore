@@ -395,6 +395,38 @@ function Chrome:GameBorder(f, layoutName)
     return holder
 end
 
+-- A window of a product's own: one the player drags about the screen, at
+-- least window-sized. In Classic it wears the game's window frame and
+-- background (those of DefaultPanelTemplate, which the game makes its
+-- plain windows from) rather than the tooltip border smaller panels get.
+-- Asked when its border is drawn: a product sets a window movable and
+-- sized before it borders it.
+function Chrome:GameWindowish(f)
+    if not (f and f.IsMovable and f:IsMovable() == true) then return false end
+    if f.GetParent and f:GetParent() ~= UIParent then return false end
+    local w, h = f:GetSize()
+    return (w and h and w >= 150 and h >= 100) and true or false
+end
+
+-- The game window's background, under the frame: its rock, tiled, and the
+-- streaks along the top, placed as DefaultPanelTemplate places them. Above
+-- the product's own fill, below everything it puts on child frames.
+function Chrome:GameWindowBackground(f)
+    local bg = f:CreateTexture(nil, "BACKGROUND", nil, 2)
+    bg:SetTexture("Interface\\FrameGeneral\\UI-Background-Rock", "REPEAT", "REPEAT")
+    if bg.SetHorizTile then bg:SetHorizTile(true); bg:SetVertTile(true) end
+    bg:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
+    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
+    local streaks = f:CreateTexture(nil, "BACKGROUND", nil, 3)
+    if pcall(streaks.SetAtlas, streaks, "_UI-Frame-TopTileStreaks", true) then
+        streaks:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -21)
+        streaks:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -21)
+    else
+        streaks:Hide()
+    end
+    return bg
+end
+
 -- Too small for one of the game's borders, whose corners alone are
 -- several pixels: a tile, or a strip. Not sized yet counts as a panel.
 function Chrome:GameSmall(f)
@@ -731,7 +763,14 @@ function Chrome:AddBorder(f, color)
     -- in the art's own colour at rest. A product that colours its border
     -- for hover or selection tints the art instead.
     if self:Game() and not self:GameSmall(f) then
-        local holder = self:GameBorder(f)
+        local window = self:GameWindowish(f)
+        local holder = self:GameBorder(f, window and "ButtonFrameTemplateNoPortrait" or nil)
+        if holder and window then
+            -- Under what the product puts on its own child frames (its
+            -- header, its sections), over its fill.
+            holder:SetFrameLevel(f:GetFrameLevel())
+            f.gameWindowBG = self:GameWindowBackground(f)
+        end
         if holder then
             local function paint(_, r, g, b, a)
                 local c = C.border
