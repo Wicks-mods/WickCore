@@ -429,6 +429,18 @@ function Chrome:GameWindowBackground(f)
     else
         streaks:Hide()
     end
+    -- TBC Anniversary's window frame draws only the title bar's rim; its
+    -- band is a texture of its own (TitleBg), placed as DefaultPanelTemplate
+    -- places it. Forever's metal frame has the band in its own art.
+    if Core.Client and Core.Client.isTBC then
+        local band = f:CreateTexture(nil, "BACKGROUND", nil, 4)
+        band:SetTexture("Interface\\FrameGeneral\\_UI-Frame")
+        band:SetTexCoord(0, 1, 0.2890625, 0.421875)
+        band:SetPoint("TOPLEFT", f, "TOPLEFT", 7, -4)
+        band:SetPoint("TOPRIGHT", f, "TOPRIGHT", -24, -4)
+        band:SetHeight(17)
+        f.gameTitleBand = band
+    end
     return bg
 end
 
