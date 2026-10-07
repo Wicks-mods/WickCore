@@ -1,6 +1,6 @@
 # WickCore - Changelog
 
-## 0.12.0 (unreleased)
+## 0.12.0 (2026-10-06)
 
 ### Added
 
@@ -9,7 +9,10 @@
   check boxes, its font and gold. The art comes from the client, so on
   TBC Anniversary it is that client's and on Forever Forever's. Every
   Wick addon follows it, for players who want what the suite does
-  without a look of its own.
+  without a look of its own. A Wick window of its own (the bags) wears
+  the game's window frame and background, and the panels inside it the
+  game's insets; buttons made from the game's templates keep its art at
+  any size.
 
 ## 0.11.1 (2026-10-05)
 
