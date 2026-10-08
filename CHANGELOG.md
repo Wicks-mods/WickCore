@@ -1,5 +1,13 @@
 # WickCore - Changelog
 
+## Unreleased
+
+### Changed
+
+- The client report line (flavor, build, interface, dialect and the rest)
+  is gone from the foot of the Wick's Mods options page. It is still
+  printed by `/wickcore`.
+
 ## 0.12.0 (2026-10-06)
 
 ### Added

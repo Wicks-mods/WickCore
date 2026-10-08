@@ -61,10 +61,6 @@ local function ensureRoot()
             shared:SetPoint("TOPLEFT", 16, ty - 4)
             shared:SetText("Wick's UI shows these same settings on its General page.")
         end
-
-        local client = Chrome:Text(f, 11, Chrome.Colors.muted)
-        client:SetPoint("BOTTOMLEFT", 16, 16)
-        client:SetText(table.concat(Core.Client:Report(), "  |  "))
     end)
 
     local root = { frame = frame }
