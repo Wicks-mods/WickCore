@@ -150,10 +150,19 @@ end
 --                each client looks like itself.
 --   edge         og: the black pixel outside the border
 --   font         the Chrome font; uiFont, when set, is also what Wick's
---                UI's "Wick" font draws in, uiBump added to its sizes
+--                UI's "Wick" font draws in, uiBump added to its sizes (or
+--                a function of the size, as bump is)
 --   headingFont  headings and titles, headingBump added to their size
---   bump         added to font sizes (faces that run small)
---   textShadow   a firm drop shadow on text
+--   bump         a function of the font size: faces that run small add
+--                to it, a pixel face snaps it to whole dots
+--   textFlags    font flags every text takes (MONOCHROME for a pixel
+--                face), added to whatever a caller asks for
+--   snap         a pixel face's size ladder: Chrome:PixelSize puts any
+--                size set in the look's face on it, products included
+--   fitText      products size their own labels' frames to the text (a
+--                heading band, a header button) instead of a fixed size,
+--                bounded by the room around them
+--   textShadow   a firm drop shadow on text, shadowOffset pixels (1) away
 --   upper        headings in capitals
 --   plate        headings on a plate in the accent
 --   dash         a short line in the accent before each heading
@@ -229,9 +238,24 @@ local F = {
     italiana     = FONTS .. "Italiana-Regular.ttf",
     exo          = FONTS .. "Exo2-Medium.ttf",
     exoBold      = FONTS .. "Exo2-SemiBold.ttf",
+    micro        = FONTS .. "Micro5-Regular.ttf",
 }
 Chrome.Fonts = F
 local function up(n) return function(size) return size + n end end
+-- A pixel face's sizes. Micro 5 is five dots tall on an eleven-dot em:
+-- 22 and 33 are exactly two and three screen pixels a dot, and 16, 19 and
+-- 27 between them still draw clean blocks at screen size (a dot a pixel
+-- wider here and there). Each size asked for goes a step up the ladder, as
+-- the game's fonts run larger than their nominal size next to it.
+local PIXEL_LADDER = { 16, 19, 22, 27, 33 }
+local PIXEL_STEP = { 11, 14, 17, 21 }
+local function pixelSnap(size)
+    for i, top in ipairs(PIXEL_STEP) do
+        if size <= top then return PIXEL_LADDER[i] end
+    end
+    return PIXEL_LADDER[#PIXEL_LADDER]
+end
+Chrome.PixelLadder = PIXEL_LADDER
 
 Chrome.Styles = {
     { id = "modern", name = "Wick Modern", family = "modern", palette = "auto",
@@ -298,6 +322,25 @@ Chrome.Styles = {
       glass = 0.55, lift = { alpha = 0 }, ringRest = { token = "fel", alpha = 0.3 },
       health = { friend = "fel", enemy = "FFB36B" }, statusbar = TEX .. "bar-glass.png", dash = true,
       sheen = { top = 0.32, bottom = 0.35 } },
+    -- 16-bit: the console era's menu window, drawn at a quarter of today's
+    -- resolution, so every dot is two screen pixels. A solid panel with a
+    -- black dot round it and the corner dots knocked out, a three-dot bevel
+    -- inside in the text colour (the ring, so hover and selection light it
+    -- in the accent), lit from the top by a gradient, nothing see-through,
+    -- no soft shadows or glows, square icons and minimap. Text is a 5-dot
+    -- pixel face drawn without smoothing at two dots per pixel (three for
+    -- titles), every size snapped to those, with a two-pixel drop shadow.
+    { id = "cartridge", name = "Cartridge", family = "modern", palette = "cartridge",
+      blurb = "16-bit: chunky bevelled windows lit from the top, square corners, blocky pixel text, gold on console blue.",
+      font = F.micro, headingFont = F.micro, uiFont = F.micro,
+      bump = pixelSnap, uiBump = pixelSnap, snap = pixelSnap, pixelEm = 11, pixelLine = 1, textFlags = "MONOCHROME", fitText = true,
+      textShadow = true, shadowOffset = 2,
+      media = { rounded = TEX .. "panel-pixel.png", ring = TEX .. "ring-pixel.png",
+                tile = TEX .. "panel-pixel.png", tileRing = TEX .. "ring-pixel-thin.png",
+                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
+      glass = 1.25, lift = { alpha = 0 }, ringRest = { token = "text", alpha = 1 },
+      sheen = { token = "border", top = 0.5, bottom = 0.5 },
+      health = { friend = "58D858", enemy = "F85858" }, statusbar = TEX .. "bar-pixel.png" },
     -- Clean cut: the flat family with nothing added. One black pixel round
     -- every panel and nothing outside it, square corners, no shadows or
     -- glows, panels a little see-through, text with a thin outline.
@@ -831,13 +874,73 @@ end
 function Chrome:SetFont(fs, size, flags, heading)
     size = size or 12
     local st = self:StyleDef()
-    if st.bump then size = st.bump(size) end
+    if st.snap then size = self:PixelSize(fs, size)
+    elseif st.bump then size = st.bump(size) end
     if heading and st.headingBump then size = size + st.headingBump end
+    flags = self:WithLookFlags(flags)
     fs:SetFont(heading and self:HeadingFont() or self:Font(), size, flags or "")
     if st.textShadow then
-        fs:SetShadowOffset(1, -1)
+        local o = st.shadowOffset or 1
+        fs:SetShadowOffset(o, -o)
         fs:SetShadowColor(0, 0, 0, 1)
     end
+end
+
+-- A size for the look's pixel face, for code that sets that face
+-- itself. Remembers what it gave each font string: code that reads a
+-- string's size back and sets it again (a skin's refresh pass) gets the
+-- same size, not the next step up. Any size in a look without a ladder
+-- comes back as it went in.
+local pixelGiven = setmetatable({}, { __mode = "k" })
+function Chrome:PixelSize(fs, size)
+    local snap = self:StyleDef().snap
+    if not snap or not size then return size end
+    if fs and pixelGiven[fs] == size then return size end
+    local out = snap(size)
+    if fs then pixelGiven[fs] = out end
+    return out
+end
+
+-- The largest step of the look's ladder, no larger than the size asked
+-- for, whose line fits a box this many pixels tall; the smallest step at
+-- least, so text stays readable and is cut rather than shrunk past it.
+-- Recorded for fs, so the next PixelSize call keeps it. Nil in a look
+-- without a ladder.
+function Chrome:PixelSizeIn(fs, size, boxH)
+    local st = self:StyleDef()
+    if not st.snap or not size or not boxH then return nil end
+    local want, line = st.snap(size), st.pixelLine or 1
+    local pick = PIXEL_LADDER[1]
+    for _, v in ipairs(PIXEL_LADDER) do
+        if v <= want and v * line <= boxH then pick = v end
+    end
+    if fs then pixelGiven[fs] = pick end
+    return pick
+end
+
+-- Font flags with the look's own added (a pixel face's MONOCHROME), once:
+-- flags that already carry it (MONOCHROMEOUTLINE, a choice Wick's UI
+-- offers) are left as they are.
+function Chrome:WithLookFlags(flags)
+    local add = self:StyleDef().textFlags
+    if not add then return flags end
+    if flags and flags ~= "" then
+        if flags:upper():find(add:upper(), 1, true) then return flags end
+        return flags .. ", " .. add
+    end
+    return add
+end
+
+-- Whether a font file is one the look draws in (its body, heading or UI
+-- face), for code deciding whether the look's ladder applies.
+function Chrome:IsLookFace(path)
+    if type(path) ~= "string" then return false end
+    local st = self:StyleDef()
+    local p = path:lower():gsub("/", "\\")
+    for _, f in ipairs({ st.font, st.uiFont, st.headingFont }) do
+        if type(f) == "string" and f:lower():gsub("/", "\\") == p then return true end
+    end
+    return false
 end
 
 function Chrome:Text(parent, size, color, flags, heading)

@@ -1,5 +1,19 @@
 # WickCore - Changelog
 
+## Unreleased
+
+### Added
+
+- Cartridge, a 16-bit look drawn as the consoles drew, every dot two
+  screen pixels: chunky windows with a black dot round them, the corner
+  dots knocked out and a three-dot bevel inside, lit from the top by a
+  gradient; square icons and minimap; flat bars with a lit top edge; and
+  blocky pixel text (Micro 5, OFL) drawn without smoothing, with a
+  two-pixel drop shadow. Every size goes on a ladder of five that all
+  draw as clean blocks, so small labels stay readable and titles stay
+  chunky, and frames grow to fit their text where they have room. Gold
+  on console blue. Every Wick addon follows it, like any other look.
+
 ## 0.12.1 (2026-11-05)
 
 ### Changed

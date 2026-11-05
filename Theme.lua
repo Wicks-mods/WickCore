@@ -52,6 +52,7 @@ local LOOK_PALETTES = {
     { id = "arena",     name = "Arena",     fel = "FF5263", void = "0C1620", shadow = "213040", border = "3E5163", text = "ECE8E1" },
     { id = "foundry",   name = "Foundry",   fel = "FF8A1F", void = "18181B", shadow = "242428", border = "5A5A62", text = "D8D2C4" },
     { id = "frost",     name = "Frost",     fel = "8FD3FF", void = "0B1117", shadow = "131C24", border = "3C5566", text = "E6F1F7" },
+    { id = "cartridge", name = "Cartridge", fel = "F8D848", void = "141C4A", shadow = "0C1234", border = "6878C0", text = "F8F8F0" },
     -- Neutral darks under the player's own class colour: the accent is
     -- the class, the rest stays grey, so it reads the same on every class.
     { id = "crisp",     name = "Crisp",     fel = "class",  void = "121212", shadow = "0A0A0A", border = "000000", text = "F0F0F0" },
