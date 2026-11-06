@@ -42,13 +42,17 @@ local function ensureRoot()
         local sub = Chrome:Text(f, 11, Chrome.Colors.muted)
         sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
         sub:SetText("Precision addons for World of Warcraft. Each addon has its own page below.")
-        local y = -64
+        -- A wide face (a pixel look) wraps the line to the page and the
+        -- list moves down to make room; elsewhere it fits and nothing moves.
+        local pw = f:GetWidth()
+        if pw and pw > 64 then sub:SetWidth(pw - 32); sub:SetJustifyH("LEFT") end
+        local y = math.min(-64, -16 - math.ceil(title:GetStringHeight() or 0) - 6 - math.ceil(sub:GetStringHeight() or 0) - 10)
         for _, A in Core:IterateAddons() do
             if A ~= Core.self then
                 local line = Chrome:Text(f, 12)
                 line:SetPoint("TOPLEFT", 16, y)
                 line:SetText(Chrome:TitleMarkup(A.title) .. "  " .. Chrome:Esc("muted") .. tostring(A.version or "") .. "|r")
-                y = y - 18
+                y = y - math.max(18, math.ceil(line:GetStringHeight() or 0) + 4)
             end
         end
         y = y - 12
@@ -102,16 +106,30 @@ function Options:ThemeSection(parent, x, y, opts)
                 or ((t and t.name or "?") .. (t and t.class and (" is the " .. t.class:sub(1, 1) .. t.class:sub(2):lower() .. " theme.") or ""))))
         end
     end
-    local SW = 52
+    -- Sized to their names: as wide as the widest and with room for a
+    -- name's height under the colour, never smaller than the design (52 by
+    -- 40, a 14 pixel name strip), so only a wide face moves anything.
+    local probe = Chrome:Text(parent, 10)
+    local widest, nameH = 0, 0
+    for _, def in ipairs(Chrome.Themes) do
+        probe:SetText(def.name)
+        widest = math.max(widest, probe:GetStringWidth() or 0)
+        nameH = math.max(nameH, probe:GetStringHeight() or 0)
+    end
+    probe:SetText("")
+    probe:Hide()
+    local SW = math.max(52, math.ceil(widest) + 6)
+    local LH = math.max(14, math.ceil(nameH) + 2)
+    local SH = 26 + LH
     local perRow = opts.width and math.max(1, math.floor((opts.width + 5) / (SW + 5))) or #Chrome.Themes
     for i, def in ipairs(Chrome.Themes) do
         local id = def.id
         local b = CreateFrame("Button", nil, parent)
-        b:SetSize(SW, 40)
+        b:SetSize(SW, SH)
         local col, row = (i - 1) % perRow, math.floor((i - 1) / perRow)
-        b:SetPoint("TOPLEFT", x + col * (SW + 5), y - row * 46)
+        b:SetPoint("TOPLEFT", x + col * (SW + 5), y - row * (SH + 6))
         local bg = b:CreateTexture(nil, "BACKGROUND")
-        bg:SetPoint("TOPLEFT", 0, 0); bg:SetPoint("BOTTOMRIGHT", 0, 14)
+        bg:SetPoint("TOPLEFT", 0, 0); bg:SetPoint("BOTTOMRIGHT", 0, LH)
         local strip = b:CreateTexture(nil, "ARTWORK")
         strip:SetPoint("TOPLEFT", 1, -1); strip:SetPoint("TOPRIGHT", -1, -1); strip:SetHeight(7)
         local acc = b:CreateTexture(nil, "OVERLAY")
@@ -157,7 +175,7 @@ function Options:ThemeSection(parent, x, y, opts)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         swatches[#swatches + 1] = b
     end
-    y = y - 46 * math.ceil(#Chrome.Themes / perRow)
+    y = y - (SH + 6) * math.ceil(#Chrome.Themes / perRow)
 
     -- Custom theme colors: two picker buttons that open Blizzard's color picker.
     local function hexToRGB(h) return tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 end
@@ -218,10 +236,17 @@ function Options:ThemeSection(parent, x, y, opts)
     local customHead = Chrome:Text(parent, 11, C.muted)
     customHead:SetPoint("TOPLEFT", x, y)
     customHead:SetText("Custom:")
-    makePicker("main", "Main", 58)
-    makePicker("accent", "Accent", 220)
+    -- Each piece after the one before it, at its design place at least.
+    local function after(prev, at)
+        return math.max(at, prev + 8)
+    end
+    local mainX = after(math.ceil(customHead:GetStringWidth() or 0), 58)
+    local mainB = makePicker("main", "Main", mainX)
+    local function pickerEnd(b, bx) return bx + 22 + math.ceil(b.lbl:GetStringWidth() or 0) end
+    local accX = after(pickerEnd(mainB, mainX), 220)
+    local accB = makePicker("accent", "Accent", accX)
     local resetBtn = Chrome:Button(parent, "Reset", 60, 20)
-    resetBtn:SetPoint("TOPLEFT", x + 384, y)
+    resetBtn:SetPoint("TOPLEFT", x + after(pickerEnd(accB, accX), 384), y)
     resetBtn:SetScript("OnClick", function()
         Chrome:SetCustomColors(Chrome.CUSTOM_DEFAULT.main, Chrome.CUSTOM_DEFAULT.accent)
         refresh()
@@ -248,17 +273,32 @@ function Options:ThemeSection(parent, x, y, opts)
     styleHead:SetPoint("TOPLEFT", x, y - 4)
     styleHead:SetText("Style:")
     local current = Chrome:StyleID()
+    -- As wide as the widest name and placed after the label, at the design
+    -- size and place at least (76 wide, five to a row, 44 in).
+    probe:Show()
+    local wName = 0
+    for _, st in ipairs(Chrome.Styles) do
+        probe:SetText(st.name)
+        wName = math.max(wName, probe:GetStringWidth() or 0)
+    end
+    probe:SetText("")
+    probe:Hide()
+    local BW = math.max(76, math.ceil(wName) + 14)
+    local left = math.max(44, math.ceil(styleHead:GetStringWidth() or 0) + 8)
+    local perStyleRow = 5
+    if opts.width and (BW > 76 or left > 44) then perStyleRow = math.max(1, math.min(5, math.floor((opts.width - left + 4) / (BW + 4)))) end
     for i, st in ipairs(Chrome.Styles) do
         -- Choosing a style reloads; the current one does nothing.
-        local b = Chrome:Button(parent, st.name, 76, 20)
-        local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
-        b:SetPoint("TOPLEFT", x + 44 + col * 80, y - row * 24)
+        local b = Chrome:Button(parent, st.name, BW, 20)
+        local col, row = (i - 1) % perStyleRow, math.floor((i - 1) / perStyleRow)
+        b:SetPoint("TOPLEFT", x + left + col * (BW + 4), y - row * 24)
         if st.id == current then b.label:SetTextColor(C.fel[1], C.fel[2], C.fel[3], 1) end
         b:HookScript("OnEnter", function()
             GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
             GameTooltip:SetText(st.name, 1, 1, 1)
             GameTooltip:AddLine(st.blurb, 0.8, 0.8, 0.8, true)
             GameTooltip:AddLine("Click to switch; the interface reloads.", 0.5, 0.5, 0.5)
+            GameTooltip:AddLine("Names and damage numbers over the world change at your next login: the game reads their font only then.", 0.5, 0.5, 0.5, true)
             GameTooltip:Show()
         end)
         b:HookScript("OnLeave", function() GameTooltip:Hide() end)
@@ -268,7 +308,7 @@ function Options:ThemeSection(parent, x, y, opts)
             Chrome:Reload()
         end)
     end
-    y = y - 24 * math.ceil(#Chrome.Styles / 5) - 2
+    y = y - 24 * math.ceil(#Chrome.Styles / perStyleRow) - 2
     refresh()
     Chrome:OnThemeChanged(refresh)
     return y

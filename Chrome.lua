@@ -159,10 +159,30 @@ end
 --                face), added to whatever a caller asks for
 --   snap         a pixel face's size ladder: Chrome:PixelSize puts any
 --                size set in the look's face on it, products included
+--   bodyFont     a face for long text a player reads (chat), where the
+--                look's own face is too small to read: bodyEm is its em in
+--                dots, and Chrome:BodySize sizes it to whole screen pixels a
+--                dot, at least bodyMinPx screen pixels tall
+--   iconDots     icons a product hands to Chrome:PixelIcon are drawn as a
+--                grid this many dots square, each dot one colour of the
+--                icon (the game's own art, sampled live, nothing shipped)
+--   gameFonts    a full interface (Wick's UI) puts the look's pixel face
+--                on the game's own font objects too, so its windows match
+--   compactDots  text marked compact (Chrome:Compact: tight slots, made for
+--                the game's narrow fonts) is never more than this many
+--                screen pixels a dot of the look's pixel face
+--   bodyExact    the long-text face is drawn at the size the player picks,
+--                exactly, rather than at whole screen pixels a dot
+--   minimapShape a shape the look requires of a product's minimap
+--                ("square"), whatever the player set for other looks
+--   minimapFrame the look puts its window round the minimap, this many
+--                pixels out from the map's edge
 --   fitText      products size their own labels' frames to the text (a
 --                heading band, a header button) instead of a fixed size,
 --                bounded by the room around them
---   textShadow   a firm drop shadow on text, shadowOffset pixels (1) away
+--   textShadow   a firm drop shadow on text, shadowOffset pixels (1) away;
+--                with shadowDot, one dot of the pixel face away, whatever
+--                its size (Chrome:ShadowFor)
 --   upper        headings in capitals
 --   plate        headings on a plate in the accent
 --   dash         a short line in the accent before each heading
@@ -238,24 +258,33 @@ local F = {
     italiana     = FONTS .. "Italiana-Regular.ttf",
     exo          = FONTS .. "Exo2-Medium.ttf",
     exoBold      = FONTS .. "Exo2-SemiBold.ttf",
-    micro        = FONTS .. "Micro5-Regular.ttf",
+    press        = FONTS .. "PressStart2P-Regular.ttf",
 }
 Chrome.Fonts = F
 local function up(n) return function(size) return size + n end end
--- A pixel face's sizes. Micro 5 is five dots tall on an eleven-dot em:
--- 22 and 33 are exactly two and three screen pixels a dot, and 16, 19 and
--- 27 between them still draw clean blocks at screen size (a dot a pixel
--- wider here and there). Each size asked for goes a step up the ladder, as
--- the game's fonts run larger than their nominal size next to it.
-local PIXEL_LADDER = { 16, 19, 22, 27, 33 }
-local PIXEL_STEP = { 11, 14, 17, 21 }
-local function pixelSnap(size)
-    for i, top in ipairs(PIXEL_STEP) do
-        if size <= top then return PIXEL_LADDER[i] end
+-- A pixel face's sizes. Press Start 2P is eight dots square: drawn at
+-- one, two or three whole screen pixels a dot it is clean blocks, and in
+-- between it is not. So a size is worked out in screen pixels, at the
+-- scale the text draws at: the size asked for, in dots, rounded to whole
+-- pixels a dot, a little in favour of the smaller (the game's sizes run
+-- large for this face), and one pixel a dot at least. A size it gave
+-- comes back unchanged, so applying it twice changes nothing.
+-- Text in a tight slot (a unit frame's name, an info bar slot, a hotkey)
+-- is marked compact, and in a look with compactDots it is never more than
+-- that many screen pixels a dot: the face is wide, and those slots are
+-- sized for the game's narrow fonts.
+local DOT_EM = 8
+local compact = setmetatable({}, { __mode = "k" })
+local function dotSnap(size, fs, cap)
+    local p = Chrome:PxPerUnit(fs)
+    local k = math.max(1, math.floor((size or 0) * p / DOT_EM + 0.25))
+    if not cap and fs and compact[fs] then
+        local st = Chrome.StyleDef and Chrome:StyleDef()
+        cap = st and st.compactDots
     end
-    return PIXEL_LADDER[#PIXEL_LADDER]
+    if cap then k = math.min(k, cap) end
+    return k * DOT_EM / p
 end
-Chrome.PixelLadder = PIXEL_LADDER
 
 Chrome.Styles = {
     { id = "modern", name = "Wick Modern", family = "modern", palette = "auto",
@@ -332,12 +361,16 @@ Chrome.Styles = {
     -- titles), every size snapped to those, with a two-pixel drop shadow.
     { id = "cartridge", name = "Cartridge", family = "modern", palette = "cartridge",
       blurb = "16-bit: chunky bevelled windows lit from the top, square corners, blocky pixel text, gold on console blue.",
-      font = F.micro, headingFont = F.micro, uiFont = F.micro,
-      bump = pixelSnap, uiBump = pixelSnap, snap = pixelSnap, pixelEm = 11, pixelLine = 1, textFlags = "MONOCHROME", fitText = true,
-      textShadow = true, shadowOffset = 2,
+      font = F.press, headingFont = F.press, uiFont = F.press,
+      bump = dotSnap, uiBump = dotSnap, snap = dotSnap, pixelEm = DOT_EM, pixelLine = 1, textFlags = "MONOCHROME", fitText = true,
+      minimapShape = "square", minimapFrame = 8, compactDots = 1, gameFonts = true, iconDots = 12,
+      bodyFont = F.press, bodyEm = 8, bodyMinPx = 8, bodyExact = true,
+      textShadow = true, shadowDot = true, shadowOffset = 2,
       media = { rounded = TEX .. "panel-pixel.png", ring = TEX .. "ring-pixel.png",
                 tile = TEX .. "panel-pixel.png", tileRing = TEX .. "ring-pixel-thin.png",
-                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10 },
+                roundmask = TEX .. "mask-square.png", iconmask = TEX .. "mask-square.png", slice = 10,
+                pill = TEX .. "pill-pixel.png", pillRing = TEX .. "pill-ring-pixel.png", pillTrack = TEX .. "pill-track-pixel.png" },
+      platePad = 4,
       glass = 1.25, lift = { alpha = 0 }, ringRest = { token = "text", alpha = 1 },
       sheen = { token = "border", top = 0.5, bottom = 0.5 },
       health = { friend = "58D858", enemy = "F85858" }, statusbar = TEX .. "bar-pixel.png" },
@@ -701,10 +734,19 @@ function Chrome:IsTile(f)
     local w, h = f and f.GetSize and f:GetSize()
     return w and h and w > 0 and h > 0 and w <= 64 and h <= 64
 end
+-- A frame that asks for a shape of the look's (a nameplate's card asks for
+-- "pill"): its panel and ring are that shape where the look has one, and
+-- the look's usual ones where it does not.
+local panelShape = setmetatable({}, { __mode = "k" })
+function Chrome:SetPanelShape(f, shape)
+    if f then panelShape[f] = shape end
+end
 function Chrome:PanelTex(f)
+    if f and panelShape[f] == "pill" and self.Media.pill then return self.Media.pill end
     return (self:IsTile(f) and self.Media.tile) or self.Media.rounded
 end
 function Chrome:RingTex(f)
+    if f and panelShape[f] == "pill" and self.Media.pillRing then return self.Media.pillRing end
     return (self:IsTile(f) and self.Media.tileRing) or self.Media.ring
 end
 
@@ -880,41 +922,213 @@ function Chrome:SetFont(fs, size, flags, heading)
     flags = self:WithLookFlags(flags)
     fs:SetFont(heading and self:HeadingFont() or self:Font(), size, flags or "")
     if st.textShadow then
-        local o = st.shadowOffset or 1
+        local o = self:ShadowFor(size)
         fs:SetShadowOffset(o, -o)
         fs:SetShadowColor(0, 0, 0, 1)
     end
 end
 
--- A size for the look's pixel face, for code that sets that face
--- itself. Remembers what it gave each font string: code that reads a
--- string's size back and sets it again (a skin's refresh pass) gets the
--- same size, not the next step up. Any size in a look without a ladder
--- comes back as it went in.
+-- Icons in dots, in a look with iconDots (Cartridge). The icon is drawn
+-- again over itself as a grid of small squares, each showing the game's
+-- own icon zoomed far in on one point, so each square is one solid
+-- colour: the icon pixelated live, from the art the game already has.
+-- The grid sits on the icon's own frame one sublevel above it, so the
+-- frame's other text and art still draw over it, and follows the icon's
+-- texture, crop, tint, desaturation, alpha and visibility. An atlas is
+-- left as the game draws it.
+--   Chrome:PixelIcon(tex)          follows tex through hooks on its methods:
+--                                  only for icons an addon's own Lua fills
+--   Chrome:PixelIcon(tex, true)    no hooks; the caller calls
+--   Chrome:PixelIconSync(tex)      after it changes the icon
+-- Nothing at all in a look without iconDots.
+local pixelIcons = setmetatable({}, { __mode = "k" })
+local SAMPLE = 0.0004
+local function opaque(v)
+    local test = rawget(_G, "issecretvalue")
+    return test and test(v) or false
+end
+-- An icon given its texture before the game has laid its frame out (an
+-- action button at login) has no size yet, so the dots cannot be placed:
+-- they are tried again on the next frames, a few times, and again when the
+-- icon's frame shows or changes size.
+local function pixRetry(g)
+    if g.retry or (g.tries or 0) >= 30 or not C_Timer then return end
+    g.retry, g.tries = true, (g.tries or 0) + 1
+    C_Timer.After(0.1, function()
+        g.retry = nil
+        g.w = nil
+        Chrome:PixelIconSync(g.tex)
+    end)
+end
+local function pixLayout(g)
+    local tex, N = g.tex, g.n
+    local w, h = tex:GetWidth(), tex:GetHeight()
+    if not (w and h and w > 0 and h > 0) then pixRetry(g) return end
+    g.tries = 0
+    local ulx, uly, _, _, _, _, lrx, lry = tex:GetTexCoord()
+    local l, r, t, b = ulx or 0, lrx or 1, uly or 0, lry or 1
+    if g.w == w and g.h == h and g.l == l and g.r == r and g.t == t and g.b == b then return end
+    g.w, g.h, g.l, g.r, g.t, g.b = w, h, l, r, t, b
+    local bw, bh = w / N, h / N
+    for y = 0, N - 1 do
+        for x = 0, N - 1 do
+            local c = g.cells[y * N + x + 1]
+            c:ClearAllPoints()
+            c:SetPoint("TOPLEFT", tex, "TOPLEFT", x * bw, -y * bh)
+            c:SetSize(bw, bh)
+            local u = l + (x + 0.5) / N * (r - l)
+            local v = t + (y + 0.5) / N * (b - t)
+            c:SetTexCoord(u - SAMPLE, u + SAMPLE, v - SAMPLE, v + SAMPLE)
+        end
+    end
+end
+-- The layer just above the icon's: the next sublevel, or the next layer
+-- up when the icon is on the top sublevel of its own.
+local NEXT_LAYER = { BACKGROUND = "BORDER", BORDER = "ARTWORK", ARTWORK = "OVERLAY", OVERLAY = "HIGHLIGHT" }
+local function layerAbove(layer, sub)
+    layer, sub = layer or "ARTWORK", sub or 0
+    if sub < 7 then return layer, sub + 1 end
+    local up = NEXT_LAYER[layer]
+    if up then return up, -8 end
+    return layer, 7
+end
+local function pixShow(g, on)
+    if g.shown == on then return end
+    for _, c in ipairs(g.cells) do c:SetShown(on) end
+    g.shown = on
+end
+
+function Chrome:PixelIconSync(tex)
+    local g = tex and pixelIcons[tex]
+    if not g then return end
+    local file = tex:GetTexture()
+    local hidden = opaque(file)
+    local has = hidden or file ~= nil
+    local atlas = tex.GetAtlas and tex:GetAtlas()
+    if not has or atlas then
+        pixShow(g, false)
+        g.file = nil
+        return
+    end
+    local layer, sub = layerAbove(tex:GetDrawLayer())
+    if #g.cells == 0 then
+        for i = 1, g.n * g.n do
+            local c = g.parent:CreateTexture(nil, layer, nil, sub)
+            if c.SetSnapToPixelGrid then c:SetSnapToPixelGrid(false); c:SetTexelSnappingBias(0) end
+            g.cells[i] = c
+        end
+        g.shown = nil
+        g.layer, g.sub = layer, sub
+    elseif g.layer ~= layer or g.sub ~= sub then
+        for _, c in ipairs(g.cells) do c:SetDrawLayer(layer, sub) end
+        g.layer, g.sub = layer, sub
+    end
+    if hidden or g.file ~= file then
+        for _, c in ipairs(g.cells) do c:SetTexture(file) end
+        g.file = (not hidden) and file or nil
+        g.l = nil
+    end
+    pixLayout(g)
+    local r, gg, b, a = tex:GetVertexColor()
+    if r ~= g.cr or gg ~= g.cg or b ~= g.cb or a ~= g.ca then
+        for _, c in ipairs(g.cells) do c:SetVertexColor(r, gg, b, a) end
+        g.cr, g.cg, g.cb, g.ca = r, gg, b, a
+    end
+    local d = (tex.IsDesaturated and tex:IsDesaturated()) and true or false
+    if d ~= g.d then
+        for _, c in ipairs(g.cells) do c:SetDesaturated(d) end
+        g.d = d
+    end
+    local alpha = tex:GetAlpha()
+    if alpha ~= g.alpha then
+        for _, c in ipairs(g.cells) do c:SetAlpha(alpha) end
+        g.alpha = alpha
+    end
+    pixShow(g, tex:IsShown() and true or false)
+end
+
+local PIX_HOOKS = { "SetTexture", "SetTexCoord", "SetVertexColor", "SetDesaturated", "SetDesaturation",
+    "Show", "Hide", "SetShown", "SetAlpha", "SetAtlas", "SetDrawLayer" }
+function Chrome:PixelIcon(tex, manual)
+    local N = self:StyleDef().iconDots
+    if not N or not tex or pixelIcons[tex] then return end
+    local parent = tex.GetParent and tex:GetParent()
+    if not (parent and parent.CreateTexture and tex.GetTexture and tex.GetTexCoord) then return end
+    pixelIcons[tex] = { tex = tex, n = N, cells = {}, parent = parent }
+    local function sync() Chrome:PixelIconSync(tex) end
+    if not manual then
+        for _, m in ipairs(PIX_HOOKS) do
+            if tex[m] then hooksecurefunc(tex, m, sync) end
+        end
+    end
+    if parent.HookScript then
+        local function again()
+            local g = pixelIcons[tex]
+            if g then g.w = nil; g.tries = 0; sync() end
+        end
+        parent:HookScript("OnSizeChanged", again)
+        parent:HookScript("OnShow", again)
+    end
+    sync()
+end
+
+-- Mark a font string as sitting in a tight slot (on = false unmarks it).
+-- Only a look with compactDots does anything with the mark.
+function Chrome:Compact(fs, on)
+    if fs then compact[fs] = (on ~= false) or nil end
+end
+
+-- A size for the look's pixel face in a tight slot, for code that hands
+-- a size to something else to set (a button library's text): whole
+-- screen pixels a dot at the interface's scale, no more than compactDots.
+-- The size unchanged in a look without a pixel face.
+function Chrome:CompactSize(size)
+    local st = self:StyleDef()
+    if not st.snap or not size then return size end
+    return st.snap(size, nil, st.compactDots)
+end
+
+-- The drop shadow's offset for text of this size: one dot of the pixel
+-- face in a look that asks for it, the look's fixed offset otherwise.
+function Chrome:ShadowFor(size)
+    local st = self:StyleDef()
+    if st.shadowDot and size and size > 0 then return size / (st.pixelEm or DOT_EM) end
+    return st.shadowOffset or 1
+end
+
+-- A size for the look's pixel face on fs, for code that sets that face
+-- itself. Remembers what was asked for each font string: code that reads
+-- a string's size back and sets it again (a skin's refresh pass) gets the
+-- size worked out from the first request, never a step up, and after the
+-- interface scale changes the same request is worked out again. Any size
+-- in a look without one comes back as it went in.
 local pixelGiven = setmetatable({}, { __mode = "k" })
 function Chrome:PixelSize(fs, size)
     local snap = self:StyleDef().snap
     if not snap or not size then return size end
-    if fs and pixelGiven[fs] == size then return size end
-    local out = snap(size)
-    if fs then pixelGiven[fs] = out end
+    local m = fs and pixelGiven[fs]
+    if m and math.abs(m.given - size) < 0.01 then
+        if m.fit then return m.given end
+        size = m.asked
+    end
+    local out = snap(size, fs)
+    if fs then pixelGiven[fs] = { asked = size, given = out } end
     return out
 end
 
--- The largest step of the look's ladder, no larger than the size asked
--- for, whose line fits a box this many pixels tall; the smallest step at
+-- The largest whole-pixel size of the look's face, no larger than the
+-- size asked for, whose line fits a box this tall; one pixel a dot at
 -- least, so text stays readable and is cut rather than shrunk past it.
 -- Recorded for fs, so the next PixelSize call keeps it. Nil in a look
--- without a ladder.
+-- without one.
 function Chrome:PixelSizeIn(fs, size, boxH)
     local st = self:StyleDef()
     if not st.snap or not size or not boxH then return nil end
-    local want, line = st.snap(size), st.pixelLine or 1
-    local pick = PIXEL_LADDER[1]
-    for _, v in ipairs(PIXEL_LADDER) do
-        if v <= want and v * line <= boxH then pick = v end
-    end
-    if fs then pixelGiven[fs] = pick end
+    local p, em, line = self:PxPerUnit(fs), st.pixelEm or DOT_EM, st.pixelLine or 1
+    local k = math.max(1, math.floor(st.snap(size, fs) * p / em + 0.5))
+    while k > 1 and (k * em / p) * line > boxH do k = k - 1 end
+    local pick = k * em / p
+    if fs then pixelGiven[fs] = { asked = size, given = pick, fit = true } end
     return pick
 end
 
@@ -931,8 +1145,49 @@ function Chrome:WithLookFlags(flags)
     return add
 end
 
+-- Physical screen pixels to one interface unit, at fs's own scale (the
+-- interface's where fs has none).
+function Chrome:PxPerUnit(fs)
+    local screen = rawget(_G, "GetPhysicalScreenSize")
+    local h = screen and select(2, screen())
+    local s
+    if fs and fs.GetEffectiveScale then s = fs:GetEffectiveScale() end
+    if not s or s == 0 then s = UIParent and UIParent:GetEffectiveScale() end
+    if not h or h == 0 or not s or s == 0 then return 1 end
+    return s * h / 768
+end
+
+-- The size, in interface units, for the look's body face on fs: whole
+-- screen pixels a dot, rounded a little in favour of the smaller as the
+-- look's other sizes are, never less than bodyMinPx tall, at the scale fs draws at now. Remembers what was asked for, so a
+-- size read back from fs and passed in again, or the same request after
+-- the interface scale changes, is worked out from the request and does
+-- not drift. The size unchanged in a look without a body face.
+local bodyMemo = setmetatable({}, { __mode = "k" })
+function Chrome:BodySize(fs, size)
+    local st = self:StyleDef()
+    if not st.bodyFont or not size then return size end
+    if st.bodyExact then return size end
+    local m = fs and bodyMemo[fs]
+    if m and math.abs(m.given - size) < 0.01 then size = m.asked end
+    local p = self:PxPerUnit(fs)
+    local em = st.bodyEm or 8
+    local k = math.max(math.ceil((st.bodyMinPx or em) / em), math.floor(size * p / em + 0.25))
+    local out = k * em / p
+    if fs then bodyMemo[fs] = { asked = size, given = out } end
+    return out
+end
+
+-- Whether a font file is the look's face for long text.
+function Chrome:IsBodyFace(path)
+    local f = self:StyleDef().bodyFont
+    if type(path) ~= "string" or type(f) ~= "string" then return false end
+    return (path:lower():gsub("/", "\\")) == (f:lower():gsub("/", "\\"))
+end
+
 -- Whether a font file is one the look draws in (its body, heading or UI
--- face), for code deciding whether the look's ladder applies.
+-- face), for code deciding whether the look's ladder applies. The face for
+-- long text is not one: it has sizes of its own (BodySize).
 function Chrome:IsLookFace(path)
     if type(path) ~= "string" then return false end
     local st = self:StyleDef()

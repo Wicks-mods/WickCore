@@ -1,5 +1,33 @@
 # WickCore - Changelog
 
+## Unreleased
+
+### Changed
+
+- Cartridge keeps the minimap square, in a window of its own, whatever
+  shape the other looks use. Products read it from the look.
+- Cartridge draws all its text in Press Start 2P (OFL), console letters
+  eight dots square, in place of Micro 5. Every size is worked out in
+  screen pixels at the interface scale you play at, so every dot is one,
+  two or three whole pixels: small labels at one, most text at two, big
+  titles at three. The drop shadow is one dot of the text it is under.
+- Text in a tight slot, made for the game's narrow fonts (a unit frame's
+  name, an info bar slot, a button's keybind), stays at one pixel a dot in
+  Cartridge, so it fits.
+- The Wick's Mods options page sizes its theme swatches, style buttons and
+  color pickers to their names, so a wide face no longer runs them into
+  each other. In the other looks nothing moves.
+- A look can ask a full interface to put its face on the game's own fonts
+  (gameFonts). Cartridge does.
+- Cartridge draws icons in dots: each icon becomes a grid twelve dots
+  square, every dot one color sampled live from the game's own icon, so
+  nothing of the game's art is shipped. Products hand their icons to it.
+- Cartridge has a capsule for nameplates, as a 16-bit action game's life
+  bar: rounded ends in dots, the bevel following the curve, a capsule track
+  inside. A frame asks for it with Chrome:SetPanelShape.
+- The look buttons say that names and damage numbers over the world change
+  at your next login, as the game reads their font only then.
+
 ## 0.13.0 (2026-11-05)
 
 ### Added
