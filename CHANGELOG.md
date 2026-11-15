@@ -1,6 +1,6 @@
 # WickCore - Changelog
 
-## Unreleased
+## 0.14.1 (2026-11-15)
 
 - Shows in the game's addon list with an icon and the two-tone Wick title, under a Wick's Mods heading.
 
