@@ -1,5 +1,10 @@
 # WickCore - Changelog
 
+## Unreleased
+
+- A choice control for options pages: one of a short list of named things, stepped through with two buttons, for the settings a number cannot carry, such as which seal or which ability. Products reach it as Options:Choice and check for it first, so a product can still meet an older WickCore.
+- Each control on an options page is kept under its label, so a page can refresh one control when another changes.
+
 ## 0.14.1 (2026-11-15)
 
 - Shows in the game's addon list with an icon and the two-tone Wick title, under a Wick's Mods heading.

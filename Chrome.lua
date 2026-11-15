@@ -1928,6 +1928,80 @@ function Chrome:Stepper(parent, label, get, set, opts)
     plus:SetScript("OnClick", function() nudge(step) end)
 
     b.Refresh = refresh
+    b.Nudge = nudge
+    refresh()
+    return b
+end
+
+-- Choice: one of a short list of named things, stepped through with two
+-- buttons. For the settings a number cannot carry: which seal, which
+-- ability, which food. Wider than Check and Stepper, because a name
+-- needs the room.
+--
+--   opts.options     a list, or a function returning one, of
+--                    { value = any, text = "what is shown" }. A function is
+--                    asked every time, since what a character knows or
+--                    carries changes while the page is open. One entry may
+--                    have a nil value: "let the addon decide".
+--   opts.other(v)    the text for a current value that is not in the list
+--                    (an item no longer carried, a name typed by hand). It
+--                    stays until the player steps off it.
+--   opts.empty       the text when the list is empty
+--   opts.width       of the whole row (360)
+--   opts.valueWidth  of the name between the two buttons (170)
+function Chrome:Choice(parent, label, get, set, opts)
+    opts = opts or {}
+    local b = CreateFrame("Frame", nil, parent)
+    b:SetSize(opts.width or 360, 18)
+    b.label = self:Text(b, 11)
+    b.label:SetPoint("LEFT", 0, 0)
+    b.label:SetText(label)
+
+    local back = self:Button(b, "<", 18, 18)
+    local fwd = self:Button(b, ">", 18, 18)
+    fwd:SetPoint("RIGHT", b, "RIGHT", 0, 0)
+    back:SetPoint("RIGHT", b, "RIGHT", -(18 + (opts.valueWidth or 170)), 0)
+    local value = self:Text(b, 11, C.fel)
+    value:SetPoint("LEFT", back, "RIGHT", 4, 0)
+    value:SetPoint("RIGHT", fwd, "LEFT", -4, 0)
+    value:SetJustifyH("CENTER")
+    if value.SetWordWrap then value:SetWordWrap(false) end
+    b.value = value
+
+    local function list()
+        local l = opts.options
+        if type(l) == "function" then l = l() end
+        return type(l) == "table" and l or {}
+    end
+    local function indexOf(l, v)
+        for i = 1, #l do if l[i].value == v then return i end end
+    end
+    local function refresh()
+        local l, v = list(), get()
+        local i = indexOf(l, v)
+        local text
+        if i then text = l[i].text or tostring(l[i].value)
+        elseif v ~= nil and opts.other then text = opts.other(v)
+        elseif v ~= nil then text = tostring(v)
+        else text = opts.empty or "-" end
+        b.text = text
+        value:SetText(text)
+    end
+    local function step(by)
+        local l = list()
+        if #l == 0 then return end
+        local i = indexOf(l, get())
+        -- Off the list: forward lands on the first entry, back on the last.
+        if not i then i = by > 0 and 0 or #l + 1 end
+        i = ((i - 1 + by) % #l) + 1
+        set(l[i].value)
+        refresh()
+    end
+    back:SetScript("OnClick", function() step(-1) end)
+    fwd:SetScript("OnClick", function() step(1) end)
+
+    b.Refresh = refresh
+    b.Step = step
     refresh()
     return b
 end

@@ -452,6 +452,14 @@ local function consume(parent, y)
     return y
 end
 
+-- Each control is kept on its page under its label, so a page can refresh
+-- one control when another changes, and a test can reach it.
+local function keep(parent, label, control)
+    parent.__controls = parent.__controls or {}
+    parent.__controls[label] = control
+    return control
+end
+
 function Options:Heading(parent, text, y)
     local fs = Chrome:Heading(parent, text)
     fs:SetPoint("TOPLEFT", 0, y)
@@ -461,19 +469,31 @@ end
 function Options:Check(parent, label, get, set, y)
     -- Every change made through an options page is something worth
     -- keeping, so the store hears about it.
-    local c = Chrome:Check(parent, label, get, function(...)
+    local c = keep(parent, label, Chrome:Check(parent, label, get, function(...)
         set(...)
         if Core.Store then Core.Store:Dirty() end
-    end)
+    end))
     c:SetPoint("TOPLEFT", 0, y)
     return consume(parent, y - 22)
 end
 
 function Options:Stepper(parent, label, get, set, y, opts)
-    local c = Chrome:Stepper(parent, label, get, function(...)
+    local c = keep(parent, label, Chrome:Stepper(parent, label, get, function(...)
         set(...)
         if Core.Store then Core.Store:Dirty() end
-    end, opts)
+    end, opts))
+    c:SetPoint("TOPLEFT", 0, y)
+    return consume(parent, y - 22)
+end
+
+-- One of a short list of named things: which seal, which ability, which
+-- food. See Chrome:Choice for opts. A product that may meet an older
+-- WickCore asks `if O.Choice then` first and falls back to a note.
+function Options:Choice(parent, label, get, set, y, opts)
+    local c = keep(parent, label, Chrome:Choice(parent, label, get, function(...)
+        set(...)
+        if Core.Store then Core.Store:Dirty() end
+    end, opts))
     c:SetPoint("TOPLEFT", 0, y)
     return consume(parent, y - 22)
 end
