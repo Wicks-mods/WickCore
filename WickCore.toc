@@ -4,9 +4,12 @@
 ## Author: Wick
 ## Version: 0.14.0
 ## SavedVariables: WickCoreDB
-## X-Category: Library
+## IconTexture: Interface\Icons\INV_Misc_Candle_03
+## Category: Wick's Mods
 ## X-Website: https://wicksmods.com
 ## X-License: MIT with trademark carve-out
+## X-Curse-Project-ID: 1708157
+## X-Category: Library
 
 LibStub.lua
 Core.lua

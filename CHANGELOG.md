@@ -1,5 +1,9 @@
 # WickCore - Changelog
 
+## Unreleased
+
+- Shows in the game's addon list with an icon and the two-tone Wick title, under a Wick's Mods heading.
+
 ## 0.14.0 (2026-11-05)
 
 ### Changed
@@ -185,7 +189,7 @@
 - A weapon's coating is read from the weapon's own tooltip, in every
   shape the client reports it.
 
-## 0.9.3 — 2026-09-24
+## 0.9.3 (2026-09-24)
 
 ### Changed
 
@@ -199,7 +203,7 @@
   variables correctly during the beta, it only failed to read them, so
   every addon has a current file of its own.
 
-## 0.9.2 — 2026-09-24
+## 0.9.2 (2026-09-24)
 
 ### Changed
 
@@ -238,7 +242,7 @@ One version across the suite for the Forever beta. Every addon carried a
 number of its own that said nothing about how finished it was, so they are
 aligned here and the suite goes to 1.0.0 together at launch.
 
-## 0.4.0 - 2026-09-21
+## 0.4.0 (2026-09-21)
 
 ### Settings that survive this client
 
@@ -265,7 +269,7 @@ change, once a minute if anything differs, and at logout.
   base64 made every one a third bigger. Fifty-four macros became about
   twenty. Anything the base64 version wrote still reads back
 
-## 0.3.0 - 2026-09-17
+## 0.3.0 (2026-09-17)
 
 ### Themes
 
@@ -283,7 +287,7 @@ default; the other eight themes are one per Forever class.
 - Chrome:Register(region, token, kind) for regions products paint themselves
 - Chat prefix and two-tone title colors follow the theme
 
-## 0.1.0 - 2026-09-17
+## 0.1.0 (2026-09-17)
 
 ### Scaffold
 
