@@ -140,12 +140,37 @@ R.refusals = {}
 local function noteRefusal(kind, addon, fn)
     if type(addon) ~= "string" or addon:sub(1, 4) ~= "Wick" then return end
     fn = tostring(fn or "an unnamed call")
+    -- The event fires inside the refused call, so the stack here is the
+    -- path that reached it. The client often names the function UNKNOWN();
+    -- the stack is then the only thing that says where it came from. Kept
+    -- in the saved settings (the last twelve distinct ones), because a
+    -- reload is usually the next thing a player does.
+    local stack
+    local ds = rawget(_G, "debugstack")
+    if ds then
+        local ok, s = pcall(ds, 3, 12, 0)
+        if ok and type(s) == "string" and s ~= "" then stack = s end
+    end
+    local db = rawget(_G, "WickCoreDB")
+    if stack and type(db) == "table" then
+        db.refusals = type(db.refusals) == "table" and db.refusals or {}
+        local seen = false
+        for _, r in ipairs(db.refusals) do
+            if r.stack == stack then r.count = (r.count or 1) + 1; seen = true break end
+        end
+        if not seen then
+            table.insert(db.refusals, 1, { kind = kind, addon = addon, fn = fn, stack = stack,
+                count = 1, when = date and date("%Y-%m-%d %H:%M") or nil,
+                combat = InCombatLockdown and InCombatLockdown() and true or false })
+            while #db.refusals > 12 do table.remove(db.refusals) end
+        end
+    end
     local key = kind .. " " .. addon .. " " .. fn
     if R.refusals[key] then
         R.refusals[key].count = R.refusals[key].count + 1
         return
     end
-    R.refusals[key] = { kind = kind, addon = addon, fn = fn, count = 1 }
+    R.refusals[key] = { kind = kind, addon = addon, fn = fn, count = 1, stack = stack }
     -- Once per distinct call, and only with /wickcore debug on: the record
     -- is always kept for /wickcore refused, but a player's chat frame is
     -- not where a protected-function name belongs.

@@ -1,5 +1,13 @@
 # WickCore - Changelog
 
+## Unreleased
+
+### Changed
+
+- When the game refuses an action because of a Wick addon, the path that
+  led to it is kept with your settings, so a report can say where it
+  came from. The game often will not name the action itself.
+
 ## 0.15.0 (2026-11-15)
 
 - A choice control for options pages: one of a short list of named things, stepped through with two buttons, for the settings a number cannot carry, such as which seal or which ability. Products reach it as Options:Choice and check for it first, so a product can still meet an older WickCore.
