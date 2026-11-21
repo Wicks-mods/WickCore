@@ -1,6 +1,6 @@
 # WickCore - Changelog
 
-## Unreleased
+## 0.15.2 (2026-11-21)
 
 ### Fixed
 
