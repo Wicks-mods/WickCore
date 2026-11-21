@@ -1,5 +1,15 @@
 # WickCore - Changelog
 
+## Unreleased
+
+### Fixed
+
+- A character could be taken for a new one at login, so a first-time
+  setup ran again and a look or profile picked for it was not found.
+  Forever does not always name the realm the same way, and settings were
+  filed under the name it gave. A character is now recognised however
+  the realm is named, and settings filed under a blank realm are kept.
+
 ## 0.15.1 (2026-11-21)
 
 ### Changed

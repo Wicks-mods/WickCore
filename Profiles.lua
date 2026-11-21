@@ -34,9 +34,58 @@ end
 
 function Profiles:NameKnown() return self:PlayerName() ~= nil end
 
-function Profiles:CharKey()
+-- The key a character's settings are filed under: "Name - Realm".
+--
+-- Forever does not always name the realm the same way. At one login
+-- GetRealmName answers with the realm, at another with an empty string,
+-- and a key built from each filed one character under two entries: every
+-- time the answer flipped, the character looked new, and whatever a
+-- product does for a new character (a setup, a default look) ran again.
+-- So, given the saved table (sv), the key is settled against what is
+-- already there:
+--   * a character met before by its id keeps the key it was given;
+--   * with no realm name, the key last used under this name;
+--   * with a realm name, an entry filed under the empty one is moved to it.
+-- Without sv it is the plain "Name - Realm", as it always was.
+local function playerGUID()
+    local f = rawget(_G, "UnitGUID")
+    if not f then return nil end
+    local ok, g = pcall(f, "player")
+    local secret = rawget(_G, "issecretvalue")
+    if not ok or type(g) ~= "string" or g == "" or (secret and secret(g)) then return nil end
+    return g
+end
+
+function Profiles:CharKey(sv)
+    local name = self:PlayerName()
     local realm = GetRealmName and GetRealmName() or "Realm"
-    return (self:PlayerName() or "Unknown") .. " - " .. realm
+    if type(realm) ~= "string" then realm = "" end
+    local key = (name or "Unknown") .. " - " .. realm
+    if not name or type(sv) ~= "table" then return key end
+    sv.char = type(sv.char) == "table" and sv.char or {}
+    sv.charIds = type(sv.charIds) == "table" and sv.charIds or {}
+    sv.charLast = type(sv.charLast) == "table" and sv.charLast or {}
+
+    local guid = playerGUID()
+    local byId = guid and sv.charIds[guid]
+    if byId and sv.char[byId] then
+        key = byId
+    elseif realm == "" then
+        local last = sv.charLast[name]
+        if last and sv.char[last] then key = last end
+    else
+        -- An entry filed while the realm had no name is this character's.
+        local blank = name .. " - "
+        if sv.char[key] == nil and sv.char[blank] ~= nil then
+            sv.char[key], sv.char[blank] = sv.char[blank], nil
+            if type(sv.profileKeys) == "table" and sv.profileKeys[key] == nil then
+                sv.profileKeys[key], sv.profileKeys[blank] = sv.profileKeys[blank], nil
+            end
+        end
+    end
+    if guid then sv.charIds[guid] = key end
+    if realm ~= "" then sv.charLast[name] = key end
+    return key
 end
 
 -- Entries an earlier build saved under the unnamed key belong to no one.
@@ -109,7 +158,7 @@ function Profiles:Init(addon, savedVar, defaults)
     end
     db.handedOver = handedOver and not baked
     db.baked = baked
-    db.charKey = self:CharKey()
+    db.charKey = self:CharKey(sv)
     db.provisional = not self:NameKnown()
     if not db.provisional then dropUnnamed(sv) end
     db.global  = Core.applyDefaults(sv.global, defaults.global or {})
@@ -173,7 +222,7 @@ end
 function DBProto:Rekey()
     if not self.provisional or not Profiles:NameKnown() then return false end
     self.provisional = nil
-    self.charKey = Profiles:CharKey()
+    self.charKey = Profiles:CharKey(self.sv)
     dropUnnamed(self.sv)
     self:_BindChar()
     local was = self.profileName

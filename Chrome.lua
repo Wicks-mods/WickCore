@@ -408,7 +408,7 @@ function Chrome:CharStore()
         Chrome._unnamed = Chrome._unnamed or {}
         return Chrome._unnamed
     end
-    local key = (P and P.CharKey and P:CharKey())
+    local key = (P and P.CharKey and P:CharKey(sv))
         or ((UnitName and UnitName("player") or "Unknown") .. " - " .. (GetRealmName and GetRealmName() or "Realm"))
     sv.char[key] = sv.char[key] or {}
     return sv.char[key]
