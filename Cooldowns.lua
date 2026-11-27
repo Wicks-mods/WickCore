@@ -188,6 +188,14 @@ function Proto:Build()
     local bg = Chrome:Texture(f, "BACKGROUND", C.voidBG); bg:SetAllPoints()
     Chrome:AddBorder(f)
     Chrome:AddBrackets(f)
+    -- Saved offsets are in the bar's own scale, so put the scale on before
+    -- restoring them. Restoring at scale 1 and letting ApplyScale convert
+    -- re-scaled the saved position on every reload.
+    do
+        local sc = tonumber(s and s.scale) or 1
+        if sc < 0.5 then sc = 0.5 elseif sc > 2.5 then sc = 2.5 end
+        f:SetScale(sc)
+    end
     if s and s.window and s.window.point then
         local w, h = f:GetWidth(), f:GetHeight()
         Chrome:RestorePosition(f, s.window)
@@ -425,6 +433,10 @@ function Proto:AttachPane(pane)
         function() return self:IsLocked() end,
         function(v) self:SetLocked(v) end)
     pane.lockCheck:SetPoint("TOPLEFT", 150, -30)
+    -- A check is 220 wide by default; side by side at 150 apart the first
+    -- covered the second and took its clicks.
+    pane.showCheck:SetWidth(140)
+    pane.lockCheck:SetWidth(140)
 
     pane.scaleStep = Chrome:Stepper(pane, "Icon scale",
         function() local st = self:Store(); return st and st.scale or 1 end,

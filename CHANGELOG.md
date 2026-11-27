@@ -1,5 +1,12 @@
 # WickCore - Changelog
 
+## 0.15.3 (2026-11-27)
+
+### Fixed
+
+- The cooldown bar kits draw (Beasts and Things and the others) moved a little on every reload. The saved position was restored before the bar's scale was applied, then converted by the scale ratio and saved again, so the saved y drifted each time. The scale is now set before the position is restored.
+- On a kit's Cooldowns tab, clicking Locked toggled Show the bar instead. The two check boxes overlapped and the first took the click.
+
 ## 0.15.2 (2026-11-21)
 
 ### Fixed
